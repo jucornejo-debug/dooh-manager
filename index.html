@@ -6,112 +6,312 @@
 <title>DOOH Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0c0e14;--bg2:#13161f;--bg3:#1a1e2e;--bg4:#222740;--border:#252a3d;--border2:#2f3550;--text:#dde1f0;--text2:#7a83a6;--text3:#454e6e;--blue:#4d7cfe;--blue-bg:#0d1a3a;--blue-dim:#1a2d5a;--green:#29d98a;--green-bg:#0a2318;--orange:#f5a623;--orange-bg:#2b1c07;--red:#f0545a;--red-bg:#280c0d;--r:8px;--r2:5px}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
-.topbar{display:flex;align-items:center;height:48px;padding:0 20px;background:var(--bg2);border-bottom:1px solid var(--border);gap:4px;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:200}
-.topbar::-webkit-scrollbar{display:none}
-.logo{font-size:12px;font-weight:600;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-right:20px;white-space:nowrap;flex-shrink:0}
-.nav-btn{padding:6px 13px;font-size:12px;color:var(--text2);background:none;border:none;border-radius:var(--r2);cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .12s;border-bottom:2px solid transparent}
-.nav-btn:hover{color:var(--text);background:var(--bg3)}
-.nav-btn.active{color:var(--text);background:var(--bg3);border-bottom-color:var(--blue);font-weight:500}
-.cfg-strip{background:var(--blue-bg);border-bottom:1px solid var(--blue-dim);padding:8px 20px;display:flex;align-items:center;gap:10px;font-size:12px;color:#7fa8ff}
-.cfg-strip input{flex:1;max-width:500px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);padding:5px 10px;font-size:11.5px;font-family:'IBM Plex Mono',monospace}
-.cfg-strip input::placeholder{color:var(--text3)}
-.page{display:none;padding:20px;max-width:1080px;margin:0 auto}
-.page.on{display:block}
-.stats{display:grid;gap:8px;margin-bottom:16px}
-.s4{grid-template-columns:repeat(4,1fr)}.s3{grid-template-columns:repeat(3,1fr)}.s2{grid-template-columns:repeat(2,1fr)}
-@media(max-width:680px){.s4,.s3{grid-template-columns:repeat(2,1fr)}}
-.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
-.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px}
-.stat-val{font-size:22px;font-weight:600;line-height:1;font-family:'IBM Plex Mono',monospace}
-.stat-sub{font-size:10.5px;color:var(--text3);margin-top:4px}
-.fbar{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:16px}
-.fg{display:flex;flex-direction:column;gap:3px}
-.fg label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
-.fg input,.fg select{font-size:12.5px;padding:5px 9px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-family:inherit}
-.fg select option{background:var(--bg2)}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--r2);border:none;font-size:12px;font-family:inherit;cursor:pointer;font-weight:500;white-space:nowrap;transition:opacity .12s}
-.btn:hover{opacity:.85}
-.btn-prim{background:var(--blue);color:#fff}
-.btn-sec{background:var(--bg3);border:1px solid var(--border2);color:var(--text)}
-.btn-sm{padding:4px 10px;font-size:11.5px}
-.sop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:8px}
-.sop-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;transition:border-color .12s;cursor:default}
-.sop-card:hover{border-color:var(--border2)}
-.sop-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
-.sop-id{font-size:13px;font-weight:600}.sop-loc{font-size:10px;color:var(--text2);margin-top:2px}
-.sop-pct{font-size:24px;font-weight:600;font-family:'IBM Plex Mono',monospace;margin:8px 0 2px}
-.bar{height:3px;background:var(--bg4);border-radius:99px;margin:6px 0;overflow:hidden}
-.bar-fill{height:100%;border-radius:99px;transition:width .3s}
-.sop-foot{display:flex;justify-content:space-between;font-size:10px;color:var(--text3)}
-.bdg{display:inline-block;font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
-.bdg-ok{background:var(--green-bg);color:var(--green)}.bdg-w{background:var(--orange-bg);color:var(--orange)}
-.bdg-err{background:var(--red-bg);color:var(--red)}.bdg-neu{background:var(--bg3);color:var(--text2)}.bdg-blu{background:var(--blue-bg);color:var(--blue)}
-.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:5px;margin-top:4px}
-.chip{padding:6px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);cursor:pointer;text-align:left;font-family:inherit;color:var(--text2);font-size:11.5px;transition:all .1s}
-.chip:hover{border-color:var(--blue);color:var(--text)}
-.chip.on{background:var(--blue-dim);border-color:var(--blue);color:var(--blue);font-weight:600}
-.chip-id{display:block;font-weight:700;font-size:12.5px}.chip-loc{font-size:9.5px;opacity:.7}
-.avail{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 12px;display:none;margin-top:6px}
-.avail-title{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px}
-.avail-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11.5px}
-.avail-row:last-child{border-bottom:none}
-.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:580px){.fg2{grid-template-columns:1fr}}
-.full{grid-column:1/-1}
-.field{display:flex;flex-direction:column;gap:4px}
-.field label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3)}
-.field input,.field select,.field textarea{padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:12.5px;font-family:inherit;width:100%;transition:border-color .12s}
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue)}
-.field input[readonly]{color:var(--text2)}
-.field textarea{min-height:56px;resize:vertical}
-.field .hint{font-size:10px;color:var(--text3);line-height:1.4}
-.field select option{background:var(--bg2)}
-.form-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:14px}
-.form-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:14px}
-.fa{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
-.msg-ok{background:var(--green-bg);color:var(--green);border:1px solid rgba(41,217,138,.2);border-radius:var(--r2);padding:9px 13px;font-size:12px;display:none;margin-bottom:12px}
-.msg-err{background:var(--red-bg);color:var(--red);border:1px solid rgba(240,84,90,.2);border-radius:var(--r2);padding:9px 13px;font-size:12px;display:none;margin-bottom:12px}
-.tbl-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border)}
-table{width:100%;border-collapse:collapse;font-size:12px}
-thead th{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:9px 12px;background:var(--bg2);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
-tbody td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
-tbody tr:last-child td{border-bottom:none}
-tbody tr:hover td{background:rgba(255,255,255,.015)}
-.stabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
-.stab{padding:5px 13px;border-radius:99px;font-size:11.5px;border:1px solid var(--border2);color:var(--text2);background:none;cursor:pointer;font-family:inherit;transition:all .1s}
-.stab.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:500}
-.stab:hover:not(.on){border-color:var(--blue);color:var(--blue)}
-.cob-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:8px}
-.cob-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.cob-prog{height:3px;background:var(--bg4);border-radius:99px;overflow:hidden;margin:8px 0 10px}
-.cob-prog-fill{height:100%;background:var(--blue);border-radius:99px}
-.cob-row{display:flex;justify-content:space-between;align-items:center;padding:5px 6px;border-radius:var(--r2);font-size:11.5px;margin-bottom:2px}
-.cob-row:hover{background:var(--bg3)}
-.chk{width:15px;height:15px;border-radius:3px;border:1px solid var(--border2);display:inline-flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0}
-.chk-ok{background:var(--green);border-color:var(--green);color:#000}.chk-fut{border-color:var(--blue);color:var(--blue)}
-.iva-row{display:grid;grid-template-columns:58px 1fr 80px 80px 80px;gap:8px;align-items:center;font-size:11.5px;padding:5px 0;border-bottom:1px solid var(--border)}
-.iva-row:last-child{border-bottom:none}
-.sec-hdr{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px;margin-top:6px}
-.divider{height:1px;background:var(--border);margin:18px 0}
-.empty{text-align:center;color:var(--text3);padding:32px;font-size:12px}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:6px}
-@keyframes sp{to{transform:rotate(360deg)}}
-.loading-row{text-align:center;color:var(--text3);padding:28px;font-size:12px}
+:root {
+  --bg:       #0c0e14;
+  --bg2:      #13161f;
+  --bg3:      #1a1e2e;
+  --bg4:      #222740;
+  --border:   #252a3d;
+  --border2:  #2f3550;
+  --text:     #dde1f0;
+  --text2:    #7a83a6;
+  --text3:    #454e6e;
+  --blue:     #4d7cfe;
+  --blue-bg:  #0d1a3a;
+  --blue-dim: #1a2d5a;
+  --green:    #29d98a;
+  --green-bg: #0a2318;
+  --orange:   #f5a623;
+  --orange-bg:#2b1c07;
+  --red:      #f0545a;
+  --red-bg:   #280c0d;
+  --r:        8px;
+  --r2:       5px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 20px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.topbar::-webkit-scrollbar { display: none; }
+.logo {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-right: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nav-btn {
+  padding: 6px 13px;
+  font-size: 12px;
+  color: var(--text2);
+  background: none;
+  border: none;
+  border-radius: var(--r2);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all .12s;
+  border-bottom: 2px solid transparent;
+}
+.nav-btn:hover { color: var(--text); background: var(--bg3); }
+.nav-btn.active { color: var(--text); background: var(--bg3); border-bottom-color: var(--blue); font-weight: 500; }
+
+/* CONFIG strip */
+.cfg-strip {
+  background: var(--blue-bg);
+  border-bottom: 1px solid var(--blue-dim);
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #7fa8ff;
+}
+.cfg-strip input {
+  flex: 1;
+  max-width: 500px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  color: var(--text);
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.cfg-strip input::placeholder { color: var(--text3); }
+#cfg-status { font-size: 11.5px; white-space: nowrap; }
+
+/* ── PAGES ── */
+.page { display: none; padding: 20px; max-width: 1080px; margin: 0 auto; }
+.page.on { display: block; }
+
+/* ── STAT ROW ── */
+.stats { display: grid; gap: 8px; margin-bottom: 16px; }
+.s4 { grid-template-columns: repeat(4,1fr); }
+.s3 { grid-template-columns: repeat(3,1fr); }
+.s2 { grid-template-columns: repeat(2,1fr); }
+@media(max-width:680px){ .s4,.s3 { grid-template-columns: repeat(2,1fr); } }
+.stat {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+}
+.stat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin-bottom: 6px; }
+.stat-val { font-size: 22px; font-weight: 600; line-height: 1; font-family: 'IBM Plex Mono', monospace; }
+.stat-sub { font-size: 10.5px; color: var(--text3); margin-top: 4px; }
+
+/* ── FILTER BAR ── */
+.fbar {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.fg { display: flex; flex-direction: column; gap: 3px; }
+.fg label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+.fg input, .fg select {
+  font-size: 12.5px;
+  padding: 5px 9px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  color: var(--text);
+  font-family: inherit;
+}
+.fg select option { background: var(--bg2); }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: var(--r2);
+  border: none;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: opacity .12s;
+}
+.btn:hover { opacity: .85; }
+.btn-prim { background: var(--blue); color: #fff; }
+.btn-sec  { background: var(--bg3); border: 1px solid var(--border2); color: var(--text); }
+.btn-sm   { padding: 4px 10px; font-size: 11.5px; }
+
+/* ── SUPPORT GRID ── */
+.sop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(152px,1fr));
+  gap: 8px;
+}
+.sop-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  transition: border-color .12s;
+  cursor: default;
+}
+.sop-card:hover { border-color: var(--border2); }
+.sop-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.sop-id { font-size: 13px; font-weight: 600; }
+.sop-loc { font-size: 10px; color: var(--text2); margin-top: 2px; }
+.sop-pct { font-size: 24px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; margin: 8px 0 2px; }
+.bar { height: 3px; background: var(--bg4); border-radius: 99px; margin: 6px 0; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; transition: width .3s; }
+.sop-foot { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); }
+
+/* ── BADGES ── */
+.bdg { display: inline-block; font-size: 9.5px; font-weight: 600; padding: 2px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.bdg-ok  { background: var(--green-bg);  color: var(--green); }
+.bdg-w   { background: var(--orange-bg); color: var(--orange); }
+.bdg-err { background: var(--red-bg);    color: var(--red); }
+.bdg-neu { background: var(--bg3);       color: var(--text2); }
+.bdg-blu { background: var(--blue-bg);   color: var(--blue); }
+
+/* ── CHIP SELECTOR ── */
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 5px; margin-top: 4px; }
+.chip {
+  padding: 6px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text2);
+  font-size: 11.5px;
+  transition: all .1s;
+}
+.chip:hover { border-color: var(--blue); color: var(--text); }
+.chip.on { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); font-weight: 600; }
+.chip-id { display: block; font-weight: 700; font-size: 12.5px; }
+.chip-loc { font-size: 9.5px; opacity: .7; }
+
+/* AVAIL PREVIEW */
+.avail {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  padding: 10px 12px;
+  display: none;
+  margin-top: 6px;
+}
+.avail-title { font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin-bottom: 6px; }
+.avail-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 11.5px; }
+.avail-row:last-child { border-bottom: none; }
+
+/* ── FORM GRID ── */
+.fg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media(max-width:580px){ .fg2 { grid-template-columns: 1fr; } }
+.full { grid-column: 1/-1; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); }
+.field input, .field select, .field textarea {
+  padding: 8px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  width: 100%;
+  transition: border-color .12s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--blue); }
+.field input[readonly] { color: var(--text2); }
+.field textarea { min-height: 56px; resize: vertical; }
+.field .hint { font-size: 10px; color: var(--text3); line-height: 1.4; }
+.field select option { background: var(--bg2); }
+.form-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; margin-bottom: 14px; }
+.form-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin-bottom: 14px; }
+.fa { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* ── ALERTS ── */
+.msg-ok { background: var(--green-bg); color: var(--green); border: 1px solid rgba(41,217,138,.2); border-radius: var(--r2); padding: 9px 13px; font-size: 12px; display: none; margin-bottom: 12px; }
+.msg-err { background: var(--red-bg); color: var(--red); border: 1px solid rgba(240,84,90,.2); border-radius: var(--r2); padding: 9px 13px; font-size: 12px; display: none; margin-bottom: 12px; }
+
+/* ── TABLE ── */
+.tbl-wrap { overflow-x: auto; border-radius: var(--r); border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); padding: 9px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(255,255,255,.015); }
+
+/* ── SUBTABS ── */
+.stabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+.stab { padding: 5px 13px; border-radius: 99px; font-size: 11.5px; border: 1px solid var(--border2); color: var(--text2); background: none; cursor: pointer; font-family: inherit; transition: all .1s; }
+.stab.on { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 500; }
+.stab:hover:not(.on) { border-color: var(--blue); color: var(--blue); }
+
+/* ── COB CARD ── */
+.cob-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 8px; }
+.cob-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.cob-prog { height: 3px; background: var(--bg4); border-radius: 99px; overflow: hidden; margin: 8px 0 10px; }
+.cob-prog-fill { height: 100%; background: var(--blue); border-radius: 99px; }
+.cob-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 6px; border-radius: var(--r2); font-size: 11.5px; margin-bottom: 2px; }
+.cob-row:hover { background: var(--bg3); }
+.chk { width: 15px; height: 15px; border-radius: 3px; border: 1px solid var(--border2); display: inline-flex; align-items: center; justify-content: center; font-size: 8px; flex-shrink: 0; }
+.chk-ok  { background: var(--green); border-color: var(--green); color: #000; }
+.chk-fut { border-color: var(--blue); color: var(--blue); }
+
+/* ── IVA CHART ── */
+.iva-row { display: grid; grid-template-columns: 58px 1fr 80px 80px 80px; gap: 8px; align-items: center; font-size: 11.5px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.iva-row:last-child { border-bottom: none; }
+
+/* ── SECTION HDR ── */
+.sec-hdr { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: 10px; margin-top: 6px; }
+.divider { height: 1px; background: var(--border); margin: 18px 0; }
+.empty { text-align: center; color: var(--text3); padding: 32px; font-size: 12px; }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: sp .6s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.loading-row { text-align: center; color: var(--text3); padding: 28px; font-size: 12px; }
 </style>
 </head>
 <body>
 
+<!-- CONFIG -->
 <div class="cfg-strip" id="cfg">
-  <span>⚡ Google Sheet URL:</span>
+  <span>⚡</span>
   <input type="url" id="cfg-url" placeholder="https://script.google.com/macros/s/…/exec" oninput="saveUrl()">
   <button class="btn btn-prim btn-sm" onclick="testConn()">Probar conexión</button>
   <span id="cfg-status"></span>
-  <button class="btn btn-sec btn-sm" onclick="document.getElementById('cfg').style.display='none'" style="margin-left:auto">Ocultar</button>
 </div>
 
+<!-- NAV -->
 <div class="topbar">
   <span class="logo">DOOH MGR</span>
   <button class="nav-btn active" onclick="go('dash',this)">Dashboard</button>
@@ -122,10 +322,11 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <button class="nav-btn" onclick="go('costos',this)">Costos</button>
   <button class="nav-btn" onclick="go('inversiones',this)">Inversiones</button>
   <button class="nav-btn" onclick="go('iva',this)">IVA</button>
-  <button class="nav-btn" onclick="document.getElementById('cfg').style.display='flex'" style="margin-left:auto;color:var(--text3)">⚙</button>
 </div>
 
-<!-- DASHBOARD -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  DASHBOARD                                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="page on" id="page-dash">
   <div class="stats s4" id="ds-kpis"></div>
   <div class="fbar">
@@ -133,20 +334,24 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     <div class="fg"><label>Hasta</label><input type="date" id="dd-hasta" oninput="renderDash()"></div>
     <div class="fg"><label>Estado</label>
       <select id="dd-est" onchange="renderDash()">
-        <option value="">Todos</option><option value="libre">Libres</option>
-        <option value="medio">Parciales</option><option value="lleno">Sin disp.</option>
+        <option value="">Todos</option>
+        <option value="libre">Libres</option>
+        <option value="medio">Parciales</option>
+        <option value="lleno">Sin disp.</option>
       </select>
     </div>
-    <button class="btn btn-sec btn-sm" onclick="['dd-desde','dd-hasta'].forEach(i=>_(i).value='');_('dd-est').value='';renderDash()">Limpiar</button>
+    <button class="btn btn-sec btn-sm" onclick="limpiarFiltrosDash()">Limpiar</button>
     <button class="btn btn-prim btn-sm" onclick="syncAll()" style="margin-left:auto">↻ Sincronizar todo</button>
   </div>
   <div class="sop-grid" id="ds-grid"></div>
 </div>
 
-<!-- DISPONIBILIDAD -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  DISPONIBILIDAD (consulta antes de vender)             -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="page" id="page-disponibilidad">
   <div class="form-box">
-    <div class="form-title">Consultar disponibilidad antes de vender</div>
+    <div class="form-title">Consultar disponibilidad de soportes</div>
     <div class="fg2">
       <div class="field"><label>Fecha inicio</label><input type="date" id="dsp-ini" oninput="checkDisp()"></div>
       <div class="field"><label>Fecha fin</label><input type="date" id="dsp-fin" oninput="checkDisp()"></div>
@@ -163,13 +368,15 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <div class="sop-grid" id="dsp-grid"></div>
 </div>
 
-<!-- CAMPAÑAS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  CAMPAÑAS (tabla de ventas)                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="page" id="page-ventas">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
     <span id="ven-cnt" style="color:var(--text2);font-size:12px"></span>
     <div style="display:flex;gap:8px">
       <select id="ven-est" onchange="renderVentas()" style="font-size:12px;padding:5px 9px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text)">
-        <option value="">Todos</option><option>ACTIVO</option><option>INACTIVO</option>
+        <option value="">Todos</option><option>Activa</option><option>Pendiente</option><option>Finalizada</option>
       </select>
       <button class="btn btn-prim btn-sm" onclick="syncVentas()">↻ Sincronizar</button>
     </div>
@@ -177,19 +384,21 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <div id="ven-loading" class="loading-row" style="display:none"><span class="spin"></span>Cargando...</div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Orden</th><th>Cliente</th><th>Soportes</th><th>Período</th><th>Total</th><th>Factura</th><th>Estado cobro</th><th>Estado</th></tr></thead>
+      <thead><tr><th>Orden</th><th>Cliente</th><th>Soportes</th><th>Período</th><th>Total</th><th>Factura</th><th>Estado cobro</th><th>Campaña</th></tr></thead>
       <tbody id="ven-tbody"></tbody>
     </table>
   </div>
 </div>
 
-<!-- NUEVA VENTA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  NUEVA VENTA                                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="page" id="page-nueva-venta">
   <div class="msg-ok" id="nv-ok">✓ Venta guardada en Google Sheets.</div>
   <div class="msg-err" id="nv-err"></div>
   <div id="nv-load" class="loading-row" style="display:none"><span class="spin"></span>Guardando...</div>
   <div class="form-box">
-    <div class="form-title">Nueva venta / campaña</div>
+    <div class="form-title">Datos de la campaña</div>
     <div class="fg2">
       <div class="field"><label>N° Orden de publicidad</label><input type="text" id="nv-orden" placeholder="OP-2025-001"></div>
       <div class="field"><label>Cliente / Anunciante</label><input type="text" id="nv-cli" placeholder="Farmacia del Centro"></div>
@@ -214,7 +423,9 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 </div>
 
-<!-- COBRANZAS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  COBRANZAS                                             -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="page" id="page-cobranzas">
   <div class="stats s4" id="cob-kpis"></div>
   <div class="stabs">
@@ -223,6 +434,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     <button class="stab" onclick="setCobTab('ok',this)">Cobrados</button>
     <button class="stab" onclick="setCobTab('all',this)">Todos</button>
   </div>
+
+  <!-- REGISTRAR COBRO (inline) -->
   <div class="form-box" id="cob-form-box">
     <div class="form-title">Registrar cobro</div>
     <div class="msg-ok" id="nc-ok">✓ Cobro registrado.</div>
@@ -232,7 +445,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         <select id="nc-cli" onchange="fillOrdenesCobro()"><option value="">Seleccionar...</option></select>
       </div>
       <div class="field"><label>Orden</label>
-        <select id="nc-orden"><option value="">— elegí cliente —</option></select>
+        <select id="nc-orden"><option value="">— primero elegí cliente —</option></select>
       </div>
       <div class="field"><label>Fecha de cobro</label>
         <input type="date" id="nc-fecha">
@@ -242,7 +455,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       <div class="field"><label>IVA incluido</label>
         <select id="nc-iva" onchange="calcIvaCob()">
           <option value="0">Sin IVA / Exento</option>
-          <option value="21">21%</option><option value="10.5">10.5%</option>
+          <option value="21">21%</option>
+          <option value="10.5">10.5%</option>
         </select>
       </div>
       <div class="field"><label>IVA calculado ($)</label><input type="text" id="nc-iva-c" readonly></div>
@@ -257,16 +471,20 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       <button class="btn btn-prim" onclick="guardarCobro()">Registrar cobro</button>
     </div>
   </div>
+
   <div class="sec-hdr" style="margin-top:20px">Estado por cliente</div>
   <div id="cob-list"></div>
 </div>
 
-<!-- COSTOS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  COSTOS                                                -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="page" id="page-costos">
   <div class="stabs">
     <button class="stab on" onclick="setCosTab('form',this)">Registrar gasto</button>
     <button class="stab" onclick="setCosTab('lista',this)">Ver gastos</button>
   </div>
+
   <div id="cos-form">
     <div class="msg-ok" id="cg-ok">✓ Gasto registrado en Google Sheets.</div>
     <div class="msg-err" id="cg-err"></div>
@@ -315,6 +533,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       </div>
     </div>
   </div>
+
   <div id="cos-lista" style="display:none">
     <div class="fbar">
       <div class="fg"><label>Desde</label><input type="date" id="cl-desde" oninput="renderGastos()"></div>
@@ -336,12 +555,15 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 </div>
 
-<!-- INVERSIONES -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  INVERSIONES                                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="page" id="page-inversiones">
   <div class="stabs">
     <button class="stab on" onclick="setInvTab('form',this)">Nueva inversión</button>
     <button class="stab" onclick="setInvTab('lista',this)">Ver inversiones</button>
   </div>
+
   <div id="inv-form">
     <div class="msg-ok" id="inv-ok">✓ Inversión registrada en Google Sheets.</div>
     <div class="msg-err" id="inv-err"></div>
@@ -357,7 +579,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
             <option>T7-P1</option><option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
           </select>
         </div>
-        <div class="field"><label>Categoría</label><input type="text" id="iv-cat" placeholder="Pantalla LED, Estructura, etc."></div>
+        <div class="field"><label>Categoría</label><input type="text" id="iv-cat" placeholder="Pantalla LED, Estructura, Cable, etc."></div>
         <div class="field"><label>Proveedor</label><input type="text" id="iv-prov" placeholder="Nombre del proveedor"></div>
         <div class="field full"><label>Descripción</label><input type="text" id="iv-desc" placeholder="Detalle del activo adquirido"></div>
         <div class="field"><label>Monto total ($)</label><input type="number" id="iv-monto" placeholder="0" oninput="calcDeprec()"></div>
@@ -368,6 +590,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         </div>
         <div class="field"><label>Valor residual ($)</label>
           <input type="number" id="iv-resid" placeholder="0" oninput="calcDeprec()">
+          <div class="hint">Valor estimado al final de la vida útil</div>
         </div>
         <div class="field"><label>Depreciación mensual (calculado)</label>
           <input type="text" id="iv-dep" readonly placeholder="—">
@@ -380,6 +603,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       </div>
     </div>
   </div>
+
   <div id="inv-lista" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <span id="inv-cnt" style="font-size:12px;color:var(--text2)"></span>
@@ -395,7 +619,9 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 </div>
 
-<!-- IVA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  IVA                                                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="page" id="page-iva">
   <div class="stats s4" id="iva-kpis"></div>
   <div class="divider"></div>
@@ -405,122 +631,139 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     <button class="stab" onclick="setIvaTab('cred',this)">Crédito fiscal</button>
   </div>
   <div id="iva-res">
-    <div class="sec-hdr">IVA mes a mes — débito (rojo) vs crédito (verde)</div>
+    <div class="sec-hdr">IVA mes a mes</div>
     <div id="iva-chart"></div>
+    <div style="display:flex;gap:14px;margin-top:10px;font-size:10.5px;color:var(--text3)">
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--red);margin-right:4px;vertical-align:middle"></span>Débito (ventas)</span>
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--green);margin-right:4px;vertical-align:middle"></span>Crédito (gastos + inversiones)</span>
+    </div>
   </div>
   <div id="iva-deb" style="display:none">
     <div class="sec-hdr">IVA débito fiscal — cobros realizados</div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>Fecha</th><th>Cliente</th><th>Orden</th><th>Factura</th><th>Neto</th><th>IVA débito</th><th>Total</th></tr></thead>
-      <tbody id="iva-deb-body"></tbody>
-    </table></div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>Fecha</th><th>Cliente</th><th>Orden</th><th>Factura</th><th>Neto</th><th>IVA débito</th><th>Total</th></tr></thead>
+      <tbody id="iva-deb-body"></tbody></table>
+    </div>
   </div>
   <div id="iva-cred" style="display:none">
     <div class="sec-hdr">IVA crédito fiscal — gastos e inversiones</div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría / Descripción</th><th>Neto</th><th>IVA crédito</th><th>Total</th></tr></thead>
-      <tbody id="iva-cred-body"></tbody>
-    </table></div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría / Descripción</th><th>Neto</th><th>IVA crédito</th><th>Total</th></tr></thead>
+      <tbody id="iva-cred-body"></tbody></table>
+    </div>
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  JAVASCRIPT                                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <script>
 // ── CONFIG ────────────────────────────────────────────────
-const LS={url:'dooh_url',camps:'dooh_camps',cobros:'dooh_cobros',gastos:'dooh_gastos',inv:'dooh_inv'};
-let URL_GS=localStorage.getItem(LS.url)||'';
-if(URL_GS) _('cfg-url').value=URL_GS;
+const LS = { url:'dooh_url', camps:'dooh_camps', cobros:'dooh_cobros', gastos:'dooh_gastos', inv:'dooh_inv' };
+let URL_GS = localStorage.getItem(LS.url) || '';
+if (URL_GS) _('cfg-url').value = URL_GS;
 
-function saveUrl(){URL_GS=_('cfg-url').value.trim();localStorage.setItem(LS.url,URL_GS);}
-
-async function testConn(){
-  const st=_('cfg-status');
-  st.textContent='⏳ probando...';st.style.color='var(--text2)';
-  try{
+function saveUrl() {
+  URL_GS = _('cfg-url').value.trim();
+  localStorage.setItem(LS.url, URL_GS);
+}
+async function testConn() {
+  const st = _('cfg-status');
+  st.textContent = '⏳ probando...'; st.style.color = 'var(--text2)';
+  try {
     await api('ping');
-    st.textContent='✓ Conectado';st.style.color='var(--green)';
-    setTimeout(()=>document.getElementById('cfg').style.display='none',1500);
-    syncAll();
-  }catch(e){st.textContent='✗ '+e.message;st.style.color='var(--red)';}
+    st.textContent = '✓ Conectado'; st.style.color = 'var(--green)';
+    setTimeout(() => _('cfg').style.display='none', 1500);
+  } catch(e) {
+    st.textContent = '✗ ' + e.message; st.style.color = 'var(--red)';
+  }
 }
 
-async function api(action,payload={}){
-  if(!URL_GS) throw new Error('URL no configurada — hacé clic en ⚙ arriba a la derecha');
-  const p=new URLSearchParams({action,payload:JSON.stringify(payload)});
-  const r=await fetch(URL_GS+'?'+p,{redirect:'follow'});
-  const txt=await r.text();
-  let d;try{d=JSON.parse(txt);}catch{throw new Error('Respuesta inválida del servidor');}
-  if(!d.ok) throw new Error(d.error||'Error desconocido');
+async function api(action, payload={}) {
+  if (!URL_GS) throw new Error('URL no configurada');
+  const p = new URLSearchParams({ action, payload: JSON.stringify(payload) });
+  const r = await fetch(URL_GS + '?' + p, { redirect: 'follow' });
+  const txt = await r.text();
+  let d; try { d = JSON.parse(txt); } catch { throw new Error('Respuesta inválida'); }
+  if (!d.ok) throw new Error(d.error || 'Error desconocido');
   return d;
 }
 
-// ── DATA ──────────────────────────────────────────────────
-const SOPS=[
-  {id:'T1-P1',loc:'Galería Margalef',cap:2592},
-  {id:'T2-P1',loc:'La Continental',cap:2880},{id:'T2-P2',loc:'La Continental',cap:2880},
-  {id:'T3-P1',loc:'El Palacio',cap:2880},{id:'T3-P2',loc:'El Palacio',cap:2880},
-  {id:'T4-P1',loc:'El Palacio',cap:2880},{id:'T4-P2',loc:'El Palacio',cap:2880},
-  {id:'T5-P1',loc:'El Punto',cap:2880},{id:'T5-P2',loc:'El Punto',cap:2880},
-  {id:'T6-P1',loc:'El Punto',cap:2880},{id:'T6-P2',loc:'El Punto',cap:2880},
-  {id:'T7-P1',loc:'Buenos Aires',cap:2880},{id:'T7-P2',loc:'Buenos Aires',cap:2880},
-  {id:'T8-P1',loc:'UCASAL',cap:2880},{id:'T8-P2',loc:'UCASAL',cap:2880},
+// ── SOPORTES ──────────────────────────────────────────────
+const SOPS = [
+  {id:'T1-P1', loc:'Galería Margalef', cap:2592},
+  {id:'T2-P1', loc:'La Continental',   cap:2880}, {id:'T2-P2', loc:'La Continental', cap:2880},
+  {id:'T3-P1', loc:'El Palacio',       cap:2880}, {id:'T3-P2', loc:'El Palacio',     cap:2880},
+  {id:'T4-P1', loc:'El Palacio',       cap:2880}, {id:'T4-P2', loc:'El Palacio',     cap:2880},
+  {id:'T5-P1', loc:'El Punto',         cap:2880}, {id:'T5-P2', loc:'El Punto',       cap:2880},
+  {id:'T6-P1', loc:'El Punto',         cap:2880}, {id:'T6-P2', loc:'El Punto',       cap:2880},
+  {id:'T7-P1', loc:'Buenos Aires',     cap:2880}, {id:'T7-P2', loc:'Buenos Aires',   cap:2880},
+  {id:'T8-P1', loc:'UCASAL',           cap:2880}, {id:'T8-P2', loc:'UCASAL',         cap:2880},
 ];
 
-function load(k,d=[]){try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}}
-function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+// ── LOCAL DATA ────────────────────────────────────────────
+function load(k, d=[]) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } }
+function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
 
-let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load(LS.inv);
+let CAMPS  = load(LS.camps);
+let COBROS = load(LS.cobros);
+let GASTOS = load(LS.gastos);
+let INVS   = load(LS.inv);
 
 // ── UTILS ─────────────────────────────────────────────────
-const _=id=>document.getElementById(id);
-const fmt=n=>Math.round(n||0).toLocaleString('es-AR');
-const fmtD=s=>{if(!s)return'—';try{return new Date(s+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch{return s;}};
-const hoy=new Date();const HOY=hoy.toISOString().slice(0,10);
-const olap=(a,b,c,d)=>new Date(a)<=new Date(d)&&new Date(b)>=new Date(c);
-const ivaC=(m,a)=>a?Math.round(m*a/100/(1+a/100)):0;
-function flash(id){_(id).style.display='block';setTimeout(()=>_(id).style.display='none',3500);}
-function flashErr(id,msg){_(id).textContent='✗ '+msg;_(id).style.display='block';setTimeout(()=>_(id).style.display='none',5000);}
+const _ = id => document.getElementById(id);
+const fmt  = n => Math.round(n||0).toLocaleString('es-AR');
+const fmtD = s => { if(!s) return '—'; try { return new Date(s+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}); } catch{return s;} };
+const hoy  = new Date(); const HOY = hoy.toISOString().slice(0,10);
+const mesLbl = (y,m) => new Date(y,m,1).toLocaleDateString('es-AR',{month:'short',year:'2-digit'});
+const olap = (a,b,c,d) => new Date(a) <= new Date(d) && new Date(b) >= new Date(c);
+const ivaC = (m,a) => a ? Math.round(m * a/100 / (1 + a/100)) : 0;
+
+function flash(id, ok=true) { _(id).style.display='block'; setTimeout(()=>_(id).style.display='none', 3500); }
+function flashErr(id, msg)  { _(id).textContent='✗ '+msg; _(id).style.display='block'; setTimeout(()=>_(id).style.display='none', 5000); }
 
 // ── NAV ───────────────────────────────────────────────────
-function go(page,el){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+function go(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   _('page-'+page).classList.add('on');
-  if(el) el.classList.add('active');
-  if(page==='dash') renderDash();
-  if(page==='disponibilidad') renderDispGrid();
-  if(page==='ventas'){renderVentas();syncVentas();}
-  if(page==='nueva-venta'){buildChips();buildCliSelect();}
-  if(page==='cobranzas'){buildCliSelect();renderCob();}
-  if(page==='costos') renderGastos();
-  if(page==='inversiones') renderInvLista();
-  if(page==='iva') renderIva();
+  if (el) el.classList.add('active');
+  if (page === 'dash')          { renderDash(); }
+  if (page === 'disponibilidad'){ renderDispGrid(); }
+  if (page === 'ventas')        { renderVentas(); syncVentas(); }
+  if (page === 'nueva-venta')   { buildChips(); buildCliSelect(); }
+  if (page === 'cobranzas')     { buildCliSelect(); renderCob(); }
+  if (page === 'costos')        { renderGastos(); }
+  if (page === 'inversiones')   { renderInvLista(); }
+  if (page === 'iva')           { renderIva(); }
 }
 
-async function syncAll(){
-  await Promise.allSettled([syncVentas(),syncGastos(),syncInversiones()]);
-  renderDash();renderIva();
+// ── SYNC ALL ──────────────────────────────────────────────
+async function syncAll() {
+  await Promise.allSettled([syncVentas(), syncGastos(), syncInversiones()]);
+  renderDash();
 }
 
-// ── OCUPACIÓN ─────────────────────────────────────────────
-function pasesEnPeriodo(sopId,desde,hasta){
-  let tot=0;
-  CAMPS.forEach(c=>{
-    if(!(c.soportes||[]).includes(sopId)) return;
-    const ci=c.ini,cf=c.fin;
-    if(!ci||!cf) return;
-    const d0=desde||ci,d1=hasta||cf;
-    if(olap(ci,cf,d0,d1)) tot+=Number(c.pases||0);
+// ── OCUPACIÓN HELPER ─────────────────────────────────────
+function pasesEnPeriodo(sopId, desde, hasta) {
+  let tot = 0;
+  CAMPS.forEach(c => {
+    if (!(c.soportes||[]).includes(sopId)) return;
+    const ci = c.ini, cf = c.fin;
+    if (!ci || !cf) return;
+    const d0 = desde || ci, d1 = hasta || cf;
+    if (olap(ci, cf, d0, d1)) tot += Number(c.pases || 0);
   });
   return tot;
 }
-const estOcup=p=>p>=90?'lleno':p>=25?'medio':'libre';
-const colOcup=p=>p>=90?'var(--red)':p>=25?'var(--orange)':'var(--green)';
-const lblOcup=p=>p>=90?'Sin disp.':p>=25?'Parcial':'Libre';
-const bdgOcup=p=>p>=90?'bdg-err':p>=25?'bdg-w':'bdg-ok';
+const estOcup = p => p >= 90 ? 'lleno' : p >= 25 ? 'medio' : 'libre';
+const colOcup = p => p >= 90 ? 'var(--red)' : p >= 25 ? 'var(--orange)' : 'var(--green)';
+const lblOcup = p => p >= 90 ? 'Sin disp.' : p >= 25 ? 'Parcial' : 'Libre';
+const bdgOcup = p => p >= 90 ? 'bdg-err' : p >= 25 ? 'bdg-w' : 'bdg-ok';
 
-function sopCardHTML(s,ocp){
-  const p=Math.min(100,Math.round((ocp/s.cap)*100));
-  const disp=Math.max(0,s.cap-ocp);
+function sopCardHTML(s, ocp, showCapacity=true) {
+  const p = Math.min(100, Math.round((ocp / s.cap) * 100));
+  const disp = Math.max(0, s.cap - ocp);
   return `<div class="sop-card">
     <div class="sop-top">
       <div><div class="sop-id">${s.id}</div><div class="sop-loc">${s.loc}</div></div>
@@ -528,85 +771,117 @@ function sopCardHTML(s,ocp){
     </div>
     <div class="sop-pct">${p}%</div>
     <div class="bar"><div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div></div>
-    <div class="sop-foot"><span>${fmt(ocp)} vend.</span><span>${fmt(disp)} libres</span></div>
+    <div class="sop-foot">
+      <span>${fmt(ocp)} vend.</span>
+      <span>${fmt(disp)} libres</span>
+    </div>
   </div>`;
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
-function renderDash(){
-  const desde=_('dd-desde').value,hasta=_('dd-hasta').value,filtE=_('dd-est').value;
-  const cobrado=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
-  const totalFact=CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
-  let totP=0,libres=0;
-  SOPS.forEach(s=>{const p=Math.min(100,Math.round((pasesEnPeriodo(s.id,desde,hasta)/s.cap)*100));totP+=p;if(estOcup(p)==='libre')libres++;});
-  _('ds-kpis').innerHTML=`
-    <div class="stat"><div class="stat-lbl">Ocupación promedio</div><div class="stat-val">${Math.round(totP/SOPS.length)}%</div><div class="stat-sub">${desde&&hasta?fmtD(desde)+' → '+fmtD(hasta):'todos los períodos'}</div></div>
+function limpiarFiltrosDash() {
+  ['dd-desde','dd-hasta'].forEach(id => _(id).value = '');
+  _('dd-est').value = '';
+  renderDash();
+}
+function renderDash() {
+  const desde = _('dd-desde').value, hasta = _('dd-hasta').value, filtE = _('dd-est').value;
+  const cobrado  = COBROS.filter(c => c.fecha <= HOY).reduce((a,c) => a + Number(c.monto||0), 0);
+  const totalFact = CAMPS.reduce((a,c) => a + Number(c.total||0), 0);
+  let totP = 0, libres = 0;
+  SOPS.forEach(s => {
+    const p = Math.min(100, Math.round((pasesEnPeriodo(s.id,desde,hasta)/s.cap)*100));
+    totP += p; if(estOcup(p) === 'libre') libres++;
+  });
+  _('ds-kpis').innerHTML = `
+    <div class="stat"><div class="stat-lbl">Ocupación promedio</div><div class="stat-val">${Math.round(totP/SOPS.length)}%</div><div class="stat-sub">${desde && hasta ? fmtD(desde)+' → '+fmtD(hasta) : 'todos los períodos'}</div></div>
     <div class="stat"><div class="stat-lbl">Soportes disponibles</div><div class="stat-val">${libres}</div><div class="stat-sub">de ${SOPS.length} caras totales</div></div>
     <div class="stat"><div class="stat-lbl">Cobrado</div><div class="stat-val" style="color:var(--green)">$${fmt(cobrado)}</div><div class="stat-sub">efectivizado</div></div>
     <div class="stat"><div class="stat-lbl">Por cobrar</div><div class="stat-val" style="color:var(--orange)">$${fmt(Math.max(0,totalFact-cobrado))}</div><div class="stat-sub">pendiente</div></div>
   `;
-  let lista=SOPS.map(s=>{const ocp=pasesEnPeriodo(s.id,desde,hasta);const p=Math.min(100,Math.round((ocp/s.cap)*100));return{s,ocp,p,est:estOcup(p)};});
-  if(filtE) lista=lista.filter(x=>x.est===filtE);
-  _('ds-grid').innerHTML=lista.map(x=>sopCardHTML(x.s,x.ocp)).join('');
+  let lista = SOPS.map(s => {
+    const ocp = pasesEnPeriodo(s.id, desde, hasta);
+    const p   = Math.min(100, Math.round((ocp / s.cap)*100));
+    return { s, ocp, p, est: estOcup(p) };
+  });
+  if (filtE) lista = lista.filter(x => x.est === filtE);
+  _('ds-grid').innerHTML = lista.map(x => sopCardHTML(x.s, x.ocp)).join('');
 }
 
 // ── DISPONIBILIDAD ────────────────────────────────────────
-function renderDispGrid(){
-  _('dsp-grid').innerHTML=SOPS.map(s=>sopCardHTML(s,pasesEnPeriodo(s.id,null,null))).join('');
+function renderDispGrid() {
+  _('dsp-grid').innerHTML = SOPS.map(s => {
+    const ocp = pasesEnPeriodo(s.id, null, null);
+    return sopCardHTML(s, ocp);
+  }).join('');
 }
-function checkDisp(){
-  const ini=_('dsp-ini').value,fin=_('dsp-fin').value;
-  const pases=parseInt(_('dsp-pases').value)||0,filtro=_('dsp-filt').value;
-  let lista=SOPS.map(s=>{
-    const ocp=ini&&fin?pasesEnPeriodo(s.id,ini,fin):0;
-    const disp=Math.max(0,s.cap-ocp);
-    const ok=!pases||pases<=disp;
-    return{s,ocp,disp,ok,pct:Math.min(100,Math.round(((ocp+(ok?pases:0))/s.cap)*100)),pctAfter:Math.min(100,Math.round(((ocp+pases)/s.cap)*100))};
+function checkDisp() {
+  const ini    = _('dsp-ini').value;
+  const fin    = _('dsp-fin').value;
+  const pases  = parseInt(_('dsp-pases').value) || 0;
+  const filtro = _('dsp-filt').value;
+  let lista = SOPS.map(s => {
+    const ocp  = ini && fin ? pasesEnPeriodo(s.id, ini, fin) : 0;
+    const disp = Math.max(0, s.cap - ocp);
+    const ok   = !pases || pases <= disp;
+    const p    = Math.min(100, Math.round(((ocp + (ok ? pases : 0)) / s.cap)*100));
+    return { s, ocp, disp, ok, p, pct_con: Math.min(100, Math.round(((ocp+pases)/s.cap)*100)) };
   });
-  if(filtro==='ok') lista=lista.filter(x=>x.ok);
-  if(filtro==='no') lista=lista.filter(x=>!x.ok);
-  _('dsp-grid').innerHTML=lista.map(x=>{
-    const s=x.s;const p=Math.min(100,Math.round((x.ocp/s.cap)*100));
-    return`<div class="sop-card" style="border-color:${pases?(x.ok?'var(--green)':'var(--red)'):'var(--border)'}">
+  if (filtro === 'ok')  lista = lista.filter(x => x.ok);
+  if (filtro === 'no')  lista = lista.filter(x => !x.ok);
+  _('dsp-grid').innerHTML = lista.map(x => {
+    const s = x.s;
+    const p = Math.min(100, Math.round((x.ocp/s.cap)*100));
+    const pAfter = Math.min(100, x.pct_con);
+    return `<div class="sop-card" style="border-color:${pases ? (x.ok ? 'var(--green)' : 'var(--red)') : 'var(--border)'}">
       <div class="sop-top">
         <div><div class="sop-id">${s.id}</div><div class="sop-loc">${s.loc}</div></div>
-        <span class="bdg ${pases?(x.ok?'bdg-ok':'bdg-err'):bdgOcup(p)}">${pases?(x.ok?'Disponible':'No disponible'):lblOcup(p)}</span>
+        <span class="bdg ${pases ? (x.ok ? 'bdg-ok' : 'bdg-err') : bdgOcup(p)}">${pases ? (x.ok ? 'Disponible' : 'No disponible') : lblOcup(p)}</span>
       </div>
-      <div class="sop-pct" style="color:${pases?(x.ok?'var(--green)':'var(--red)'):'inherit'}">${x.pctAfter}%</div>
-      <div class="bar"><div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div></div>
-      <div class="sop-foot"><span>Ocup: ${fmt(x.ocp)}</span><span>Libres: <strong style="color:${x.ok?'var(--green)':'var(--red)'}">${fmt(x.disp)}</strong></span></div>
+      <div class="sop-pct" style="color:${pases ? (x.ok ? 'var(--green)' : 'var(--red)') : 'inherit'}">${pAfter}%</div>
+      <div class="bar"><div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div>${pases ? `<div style="position:relative;height:3px;margin-top:-3px;width:${Math.min(100,Math.round((pases/s.cap)*100))}%;background:rgba(77,124,254,.5);border-radius:99px"></div>` : ''}</div>
+      <div class="sop-foot">
+        <span>Ocup: ${fmt(x.ocp)}</span>
+        <span>Libres: <strong style="color:${x.ok?'var(--green)':'var(--red)'}">${fmt(x.disp)}</strong></span>
+      </div>
     </div>`;
   }).join('');
 }
 
 // ── VENTAS ────────────────────────────────────────────────
-async function syncVentas(){
-  if(!URL_GS) return;
-  _('ven-loading').style.display='block';
-  try{
-    const r=await api('getVentas');
-    const byOrden={};
-    (r.filas||[]).forEach(row=>{
-      const ord=row['N° Orden de Publicidad'];if(!ord) return;
-      if(!byOrden[ord]) byOrden[ord]={
-        orden:ord,cliente:row['Cliente'],ini:row['Fecha Inicio'],fin:row['Fecha Fin'],
-        pases:Number(row['Pases'])||0,total:Number(row['Total Facturado'])||0,
-        factura:row['N° de Factura'],cobro:row['Estado Facturación']||'',
-        estado:row['Estado']||'',soportes:[]
+async function syncVentas() {
+  if (!URL_GS) return;
+  _('ven-loading').style.display = 'block';
+  try {
+    const r = await api('getVentas');
+    // filas = una fila por soporte; agrupamos por orden
+    const byOrden = {};
+    (r.filas || []).forEach(row => {
+      const ord = row['N° Orden de Publicidad']; if(!ord) return;
+      if (!byOrden[ord]) byOrden[ord] = {
+        orden: ord, cliente: row['Cliente'],
+        ini: row['Fecha Inicio'], fin: row['Fecha Fin'],
+        pases: Number(row['Pases'])||0,
+        total: Number(row['Total Facturado'])||0,
+        factura: row['N° de Factura'],
+        cobro: row['Estado Facturación'] || row['Estado'] || '',
+        estado: row['Estado'] || '',
+        soportes: []
       };
-      if(row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
+      if (row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
     });
-    CAMPS=Object.values(byOrden);
-    save(LS.camps,CAMPS);renderVentas();renderDash();buildCliSelect();
-  }catch(e){console.error('syncVentas:',e);}
-  finally{_('ven-loading').style.display='none';}
+    CAMPS = Object.values(byOrden);
+    save(LS.camps, CAMPS);
+    renderVentas(); renderDash();
+  } catch(e) { console.error('syncVentas:', e); }
+  finally { _('ven-loading').style.display = 'none'; }
 }
-function renderVentas(){
-  const fe=_('ven-est').value;
-  let lista=CAMPS.slice().reverse();
-  if(fe) lista=lista.filter(c=>c.estado===fe);
-  _('ven-cnt').textContent=lista.length+' orden'+(lista.length!==1?'es':'');
-  _('ven-tbody').innerHTML=lista.map(c=>`<tr>
+function renderVentas() {
+  const fe = _('ven-est').value;
+  let lista = CAMPS.slice().reverse();
+  if (fe) lista = lista.filter(c => c.estado === fe);
+  _('ven-cnt').textContent = lista.length + ' orden' + (lista.length!==1?'es':'');
+  _('ven-tbody').innerHTML = lista.map(c => `<tr>
     <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2)">${c.orden||'—'}</td>
     <td style="font-weight:500">${c.cliente||'—'}</td>
     <td style="font-size:11px;color:var(--text2)">${(c.soportes||[]).join(', ')||'—'}</td>
@@ -614,203 +889,434 @@ function renderVentas(){
     <td style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.total)}</td>
     <td style="font-size:11px">${c.factura||'—'}</td>
     <td><span class="bdg ${c.cobro==='Cobrado'?'bdg-ok':c.cobro==='Pendiente'?'bdg-w':'bdg-blu'}">${c.cobro||'—'}</span></td>
-    <td><span class="bdg ${c.estado==='ACTIVO'?'bdg-ok':c.estado==='INACTIVO'?'bdg-neu':'bdg-w'}">${c.estado||'—'}</span></td>
-  </tr>`).join('')||`<tr><td colspan="8" class="empty">Sin campañas. Hacé clic en ↻ Sincronizar.</td></tr>`;
+    <td><span class="bdg ${c.estado==='Activa'?'bdg-ok':c.estado==='Pendiente'?'bdg-w':'bdg-neu'}">${c.estado||'—'}</span></td>
+  </tr>`).join('') || `<tr><td colspan="8" class="empty">Sin campañas cargadas</td></tr>`;
 }
 
 // ── NUEVA VENTA ───────────────────────────────────────────
-let selSops=[];
-function buildChips(){
-  selSops=[];
-  _('nv-chips').innerHTML=SOPS.map(s=>`<button class="chip" id="ch-${s.id}" onclick="toggleChip('${s.id}')"><span class="chip-id">${s.id}</span><span class="chip-loc">${s.loc}</span></button>`).join('');
+let selSops = [];
+function buildChips() {
+  selSops = [];
+  _('nv-chips').innerHTML = SOPS.map(s => `
+    <button class="chip" id="ch-${s.id}" onclick="toggleChip('${s.id}')">
+      <span class="chip-id">${s.id}</span><span class="chip-loc">${s.loc}</span>
+    </button>`).join('');
 }
-function toggleChip(id){
-  const i=selSops.indexOf(id);if(i>-1) selSops.splice(i,1);else selSops.push(id);
-  SOPS.forEach(s=>{const el=_('ch-'+s.id);if(el) el.className='chip'+(selSops.includes(s.id)?' on':'');});
+function toggleChip(id) {
+  const i = selSops.indexOf(id);
+  if (i > -1) selSops.splice(i,1); else selSops.push(id);
+  SOPS.forEach(s => { const el=_('ch-'+s.id); if(el) el.className='chip'+(selSops.includes(s.id)?' on':''); });
   checkAvNV();
 }
-function checkAvNV(){
-  const ini=_('nv-ini').value,fin=_('nv-fin').value,pases=parseInt(_('nv-pases').value)||0;
-  const box=_('nv-avail');
-  if(!selSops.length||!ini||!fin||!pases){box.style.display='none';return;}
-  let rows='',anyBad=false;
-  selSops.forEach(sid=>{
-    const s=SOPS.find(x=>x.id===sid);
-    const ocp=pasesEnPeriodo(sid,ini,fin),disp=Math.max(0,s.cap-ocp),ok=pases<=disp;
-    if(!ok) anyBad=true;
-    const pAfter=Math.min(100,Math.round(((ocp+pases)/s.cap)*100));
-    rows+=`<div class="avail-row"><span style="font-weight:600">${sid}</span><span>Libres: <strong style="color:${ok?'var(--green)':'var(--red)'}">${fmt(disp)}</strong> · Solicita: ${fmt(pases)} · Final: <strong style="color:${pAfter>=90?'var(--red)':pAfter>=60?'var(--orange)':'var(--green)'}">${pAfter}%</strong></span></div>`;
+function checkAvNV() {
+  const ini=_('nv-ini').value, fin=_('nv-fin').value, pases=parseInt(_('nv-pases').value)||0;
+  const box = _('nv-avail');
+  if (!selSops.length || !ini || !fin || !pases) { box.style.display='none'; return; }
+  let rows = '', anyBad = false;
+  selSops.forEach(sid => {
+    const s = SOPS.find(x=>x.id===sid);
+    const ocp  = pasesEnPeriodo(sid, ini, fin);
+    const disp = Math.max(0, s.cap - ocp);
+    const ok   = pases <= disp;
+    if (!ok) anyBad = true;
+    const pAfter = Math.min(100, Math.round(((ocp+pases)/s.cap)*100));
+    rows += `<div class="avail-row">
+      <span style="font-weight:600">${sid}</span>
+      <span>Libres: <strong style="color:${ok?'var(--green)':'var(--red)'}">${fmt(disp)}</strong> · Solicita: ${fmt(pases)} · Ocupación final: <strong style="color:${pAfter>=90?'var(--red)':pAfter>=60?'var(--orange)':'var(--green)'}">${pAfter}%</strong></span>
+    </div>`;
   });
-  box.innerHTML=`<div class="avail"><div class="avail-title">Verificación · ${selSops.length} soporte${selSops.length>1?'s':''}</div>${rows}${anyBad?'<div style="color:var(--red);margin-top:6px;font-size:11px">⚠ Disponibilidad insuficiente en al menos un soporte</div>':''}</div>`;
-  box.style.display='block';
+  box.innerHTML = `<div class="avail"><div class="avail-title">Verificación de disponibilidad · ${selSops.length} soporte${selSops.length>1?'s':''}</div>${rows}${anyBad?'<div style="color:var(--red);margin-top:6px;font-size:11px">⚠ Disponibilidad insuficiente en al menos un soporte</div>':''}</div>`;
+  box.style.display = 'block';
 }
-async function guardarVenta(){
-  const cli=_('nv-cli').value.trim(),ini=_('nv-ini').value,fin=_('nv-fin').value,pases=parseInt(_('nv-pases').value)||0;
-  if(!cli||!selSops.length||!ini||!fin||!pases){alert('Completá: cliente, al menos un soporte, fechas y pases.');return;}
-  const payload={orden:_('nv-orden').value.trim()||('OP-'+Date.now().toString().slice(-5)),cliente:cli,soportes:selSops,fechaInicio:ini,fechaFin:fin,pases,totalFacturado:parseFloat(_('nv-total').value)||0,nroFactura:_('nv-fac').value.trim()};
-  _('nv-load').style.display='block';
-  try{
-    if(URL_GS) await api('saveVenta',payload);
-    CAMPS.push({...payload,ini,fin,total:payload.totalFacturado,factura:payload.nroFactura,cobro:_('nv-cobest').value,estado:'ACTIVO'});
-    save(LS.camps,CAMPS);flash('nv-ok');resetNV();renderDash();buildCliSelect();
-  }catch(e){flashErr('nv-err',e.message);}
-  finally{_('nv-load').style.display='none';}
+async function guardarVenta() {
+  const cli = _('nv-cli').value.trim();
+  const ini = _('nv-ini').value, fin = _('nv-fin').value;
+  const pases = parseInt(_('nv-pases').value)||0;
+  if (!cli || !selSops.length || !ini || !fin || !pases) {
+    alert('Completá: cliente, al menos un soporte, fechas y pases.'); return;
+  }
+  const payload = {
+    orden:  _('nv-orden').value.trim() || ('OP-'+Date.now().toString().slice(-5)),
+    cliente: cli, soportes: selSops,
+    fechaInicio: ini, fechaFin: fin, pases,
+    totalFacturado: parseFloat(_('nv-total').value)||0,
+    nroFactura: _('nv-fac').value.trim(),
+  };
+  _('nv-load').style.display = 'block';
+  try {
+    if (URL_GS) await api('saveVenta', payload);
+    CAMPS.push({ ...payload, ini, fin, total: payload.totalFacturado, factura: payload.nroFactura, cobro: _('nv-cobest').value, estado: 'Activa' });
+    save(LS.camps, CAMPS);
+    flash('nv-ok'); resetNV(); renderDash();
+  } catch(e) { flashErr('nv-err', e.message); }
+  finally { _('nv-load').style.display='none'; }
 }
-function resetNV(){selSops=[];buildChips();['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs'].forEach(id=>_(id).value='');_('nv-avail').style.display='none';}
+function resetNV() {
+  selSops = []; buildChips();
+  ['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs'].forEach(id=>_(id).value='');
+  _('nv-avail').style.display='none';
+}
 
 // ── COBRANZAS ─────────────────────────────────────────────
-let cobTab='pend';
-function setCobTab(t,el){cobTab=t;document.querySelectorAll('#page-cobranzas .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');renderCob();}
-function buildCliSelect(){
-  const clis=[...new Set(CAMPS.map(c=>c.cliente).filter(Boolean))];
-  _('nc-cli').innerHTML='<option value="">Seleccionar...</option>'+clis.map(c=>`<option>${c}</option>`).join('');
+let cobTab = 'pend';
+function setCobTab(t,el) {
+  cobTab = t;
+  document.querySelectorAll('#page-cobranzas .stab').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  renderCob();
 }
-function fillOrdenesCobro(){
-  const cli=_('nc-cli').value;
-  const camps=CAMPS.filter(c=>c.cliente===cli);
-  _('nc-orden').innerHTML=camps.length?camps.map(c=>`<option value="${c.orden}">${c.orden} — $${fmt(c.total)}</option>`).join(''):'<option value="">Sin campañas</option>';
+function buildCliSelect() {
+  const clis = [...new Set(CAMPS.map(c=>c.cliente).filter(Boolean))];
+  _('nc-cli').innerHTML = '<option value="">Seleccionar...</option>' + clis.map(c=>`<option>${c}</option>`).join('');
 }
-function calcIvaCob(){const m=parseFloat(_('nc-monto').value)||0,a=parseFloat(_('nc-iva').value)||0;_('nc-iva-c').value=a?'$'+fmt(ivaC(m,a)):'$0';}
-async function guardarCobro(){
-  const cli=_('nc-cli').value,fecha=_('nc-fecha').value,monto=parseFloat(_('nc-monto').value)||0;
-  if(!cli||!fecha||!monto){alert('Completá cliente, fecha y monto.');return;}
-  const cobro={id:'C-'+(COBROS.length+1).toString().padStart(3,'0'),cliente:cli,orden:_('nc-orden').value,fecha,monto,ivaAl:parseFloat(_('nc-iva').value)||0,factura:_('nc-fac').value,pago:_('nc-pago').value,obs:_('nc-obs').value};
-  try{
-    if(URL_GS) await api('saveCobro',{orden:cobro.orden,cliente:cobro.cliente,fechaCobroProyectada:cobro.fecha,montoNeto:monto-ivaC(monto,cobro.ivaAl),iva:ivaC(monto,cobro.ivaAl),metodoPago:cobro.pago,fechaPagoReal:cobro.fecha<=HOY?cobro.fecha:''});
-    COBROS.push(cobro);save(LS.cobros,COBROS);flash('nc-ok');resetCobro();renderCob();renderDash();renderIva();
-  }catch(e){flashErr('nc-err',e.message);}
+function fillOrdenesCobro() {
+  const cli = _('nc-cli').value;
+  const camps = CAMPS.filter(c => c.cliente === cli);
+  _('nc-orden').innerHTML = camps.length
+    ? camps.map(c=>`<option value="${c.orden}">${c.orden} — $${fmt(c.total)}</option>`).join('')
+    : '<option value="">Sin campañas</option>';
 }
-function resetCobro(){['nc-fecha','nc-monto','nc-fac','nc-obs','nc-iva-c'].forEach(id=>_(id).value='');_('nc-cli').value='';_('nc-iva').value='0';}
-function renderCob(){
-  const totalFact=CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
-  const cobHoy=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
-  const cobFut=COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
-  _('cob-kpis').innerHTML=`
+function calcIvaCob() {
+  const m = parseFloat(_('nc-monto').value)||0, a = parseFloat(_('nc-iva').value)||0;
+  _('nc-iva-c').value = a ? '$'+fmt(ivaC(m,a)) : '$0';
+}
+async function guardarCobro() {
+  const cli = _('nc-cli').value, fecha = _('nc-fecha').value, monto = parseFloat(_('nc-monto').value)||0;
+  if (!cli || !fecha || !monto) { alert('Completá cliente, fecha y monto.'); return; }
+  const cobro = {
+    id: 'C-'+(COBROS.length+1).toString().padStart(3,'0'),
+    cliente: cli, orden: _('nc-orden').value, fecha, monto,
+    ivaAl: parseFloat(_('nc-iva').value)||0,
+    factura: _('nc-fac').value, pago: _('nc-pago').value, obs: _('nc-obs').value
+  };
+  try {
+    if (URL_GS) await api('saveCobro', {
+      orden: cobro.orden, cliente: cobro.cliente,
+      fecha: cobro.fecha, fechaCobroProyectada: cobro.fecha,
+      montoNeto: monto - ivaC(monto, cobro.ivaAl),
+      iva: ivaC(monto, cobro.ivaAl),
+      metodoPago: cobro.pago,
+      fechaPagoReal: cobro.fecha <= HOY ? cobro.fecha : ''
+    });
+    COBROS.push(cobro); save(LS.cobros, COBROS);
+    flash('nc-ok'); resetCobro(); renderCob(); renderDash(); renderIva();
+  } catch(e) { flashErr('nc-err', e.message); }
+}
+function resetCobro() {
+  ['nc-fecha','nc-monto','nc-fac','nc-obs','nc-iva-c'].forEach(id=>_(id).value='');
+  _('nc-cli').value=''; _('nc-iva').value='0';
+}
+function renderCob() {
+  const totalFact = CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
+  const cobHoy    = COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  const cobFut    = COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  const sinProg   = Math.max(0, totalFact - cobHoy - cobFut);
+  _('cob-kpis').innerHTML = `
     <div class="stat"><div class="stat-lbl">Total facturado</div><div class="stat-val">$${fmt(totalFact)}</div></div>
     <div class="stat"><div class="stat-lbl">Cobrado</div><div class="stat-val" style="color:var(--green)">$${fmt(cobHoy)}</div></div>
     <div class="stat"><div class="stat-lbl">Programado</div><div class="stat-val" style="color:var(--blue)">$${fmt(cobFut)}</div><div class="stat-sub">cobros futuros</div></div>
-    <div class="stat"><div class="stat-lbl">Sin programar</div><div class="stat-val" style="color:var(--orange)">$${fmt(Math.max(0,totalFact-cobHoy-cobFut))}</div></div>
+    <div class="stat"><div class="stat-lbl">Sin programar</div><div class="stat-val" style="color:var(--orange)">$${fmt(sinProg)}</div><div class="stat-sub">no tiene cobro asignado</div></div>
   `;
-  const clis=[...new Set(CAMPS.map(c=>c.cliente).filter(Boolean))];
-  let html='';
-  clis.forEach(cli=>{
-    const campsCli=CAMPS.filter(c=>c.cliente===cli);
-    const cobrosCli=COBROS.filter(c=>c.cliente===cli);
-    const tot=campsCli.reduce((a,c)=>a+Number(c.total||0),0);
-    const cobReal=cobrosCli.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
-    const cobF=cobrosCli.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
-    const pend=Math.max(0,tot-cobReal);
-    const pct=tot>0?Math.round((cobReal/tot)*100):0;
-    if(cobTab==='ok'&&pend>0) return;
-    if(cobTab==='pend'&&cobReal>=tot&&tot>0) return;
-    if(cobTab==='prog'&&cobF===0) return;
-    html+=`<div class="cob-card">
+  const clis = [...new Set(CAMPS.map(c=>c.cliente).filter(Boolean))];
+  let html = '';
+  clis.forEach(cli => {
+    const campsCli  = CAMPS.filter(c => c.cliente === cli);
+    const cobrosCli = COBROS.filter(c => c.cliente === cli);
+    const tot     = campsCli.reduce((a,c)=>a+Number(c.total||0),0);
+    const cobReal = cobrosCli.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+    const cobF    = cobrosCli.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+    const pend    = Math.max(0, tot - cobReal);
+    const pct     = tot > 0 ? Math.round((cobReal/tot)*100) : 0;
+    if (cobTab==='ok'   && pend > 0)    return;
+    if (cobTab==='pend' && cobReal>=tot && tot>0) return;
+    if (cobTab==='prog' && cobF===0)    return;
+    html += `<div class="cob-card">
       <div class="cob-top">
-        <div><div style="font-weight:600;font-size:13px">${cli}</div><div style="font-size:10.5px;color:var(--text2);margin-top:2px">${campsCli.length} campaña${campsCli.length>1?'s':''} · ${pct}% cobrado</div></div>
-        <div style="text-align:right"><div style="font-weight:600">$${fmt(tot)}</div><div style="font-size:10.5px;color:${pend===0?'var(--green)':cobF>=pend?'var(--blue)':'var(--orange)'};margin-top:2px">${pend===0?'✓ Cobrado':cobF>=pend?'✓ Programado':'$'+fmt(pend)+' pendiente'}</div></div>
+        <div>
+          <div style="font-weight:600;font-size:13px">${cli}</div>
+          <div style="font-size:10.5px;color:var(--text2);margin-top:2px">${campsCli.length} campaña${campsCli.length>1?'s':''} · ${pct}% cobrado</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:600">$${fmt(tot)}</div>
+          <div style="font-size:10.5px;color:${pend===0?'var(--green)':cobF>=pend?'var(--blue)':'var(--orange)'};margin-top:2px">${pend===0?'✓ Cobrado completo':cobF>=pend?'✓ Programado':'$'+fmt(pend)+' pendiente'}</div>
+        </div>
       </div>
       <div class="cob-prog"><div class="cob-prog-fill" style="width:${pct}%"></div></div>
-      ${cobrosCli.map(c=>{const fut=c.fecha>HOY;return`<div class="cob-row"><div style="display:flex;align-items:center;gap:7px"><span class="chk ${!fut?'chk-ok':'chk-fut'}">${!fut?'✓':'○'}</span><span style="color:var(--text2)">${c.id}${c.obs?' · '+c.obs:''}</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.monto)}</span><span style="font-size:10.5px;color:${fut?'var(--blue)':'var(--text3)'}">${fmtD(c.fecha)}${fut?' →':''}</span><span class="bdg ${!fut?'bdg-ok':'bdg-blu'}">${!fut?'Cobrado':'Programado'}</span></div></div>`;}).join('')}
+      ${cobrosCli.map(c=>{
+        const fut = c.fecha > HOY;
+        return `<div class="cob-row">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span class="chk ${!fut?'chk-ok':'chk-fut'}">${!fut?'✓':'○'}</span>
+            <span style="color:var(--text2)">${c.id}${c.obs?' · '+c.obs:''}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.monto)}</span>
+            <span style="font-size:10.5px;color:${fut?'var(--blue)':'var(--text3)'}">${fmtD(c.fecha)}${fut?' →':''}</span>
+            <span class="bdg ${!fut?'bdg-ok':'bdg-blu'}">${!fut?'Cobrado':'Programado'}</span>
+          </div>
+        </div>`;
+      }).join('')}
       <button class="btn btn-sec btn-sm" style="margin-top:8px" onclick="irACobro('${cli}')">+ Agregar cobro</button>
     </div>`;
   });
-  _('cob-list').innerHTML=html||`<div class="empty">Sin resultados para este filtro.</div>`;
+  _('cob-list').innerHTML = html || `<div class="empty">Sin resultados para este filtro.</div>`;
 }
-function irACobro(cli){buildCliSelect();_('nc-cli').value=cli;fillOrdenesCobro();_('cob-form-box').scrollIntoView({behavior:'smooth'});}
+function irACobro(cli) {
+  buildCliSelect(); _('nc-cli').value = cli; fillOrdenesCobro();
+  _('cob-form-box').scrollIntoView({behavior:'smooth'});
+}
 
 // ── COSTOS ────────────────────────────────────────────────
-let cosTab='form';
-function setCosTab(t,el){cosTab=t;document.querySelectorAll('#page-costos .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');_('cos-form').style.display=t==='form'?'block':'none';_('cos-lista').style.display=t==='lista'?'block':'none';if(t==='lista') renderGastos();}
-function calcIvaGasto(){const m=parseFloat(_('cg-neto').value)||0,a=parseFloat(_('cg-iva').value)||0;_('cg-iva-c').value=a?'$'+fmt(m*(a/100)):'$0';}
-async function guardarGasto(){
-  const fecha=_('cg-fecha').value,neto=parseFloat(_('cg-neto').value)||0;
-  if(!fecha||!neto){alert('Ingresá fecha y monto.');return;}
-  const al=parseFloat(_('cg-iva').value)||0;
-  const g={id:'G-'+(GASTOS.length+1).toString().padStart(3,'0'),fecha,fechaPago:_('cg-fpago').value||fecha,cat:_('cg-cat').value,sop:_('cg-sop').value,desc:_('cg-desc').value,neto,al,est:_('cg-est').value,pago:_('cg-pago').value};
-  try{
-    if(URL_GS) await api('saveCosto',{fecha:g.fecha,fechaPago:g.fechaPago,soporte:g.sop,categoria:g.cat,descripcion:g.desc,monto:g.neto,formaPago:g.pago});
-    GASTOS.push(g);save(LS.gastos,GASTOS);flash('cg-ok');resetGasto();renderIva();
-  }catch(e){flashErr('cg-err',e.message);}
+let cosTab = 'form';
+function setCosTab(t,el) {
+  cosTab = t;
+  document.querySelectorAll('#page-costos .stab').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  _('cos-form').style.display  = t==='form' ? 'block':'none';
+  _('cos-lista').style.display = t==='lista'? 'block':'none';
+  if (t === 'lista') renderGastos();
 }
-function resetGasto(){['cg-fecha','cg-fpago','cg-neto','cg-desc','cg-iva-c'].forEach(id=>_(id).value='');_('cg-iva').value='0';_('cg-sop').value='';_('cg-est').value='Pagado';}
-async function syncGastos(){
-  if(!URL_GS) return;
-  try{
-    const r=await api('getCostos');
-    GASTOS=r.data.map(g=>({id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',neto:Number(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||''}));
-    save(LS.gastos,GASTOS);renderGastos();renderIva();
-  }catch(e){alert('Error gastos: '+e.message);}
+function calcIvaGasto() {
+  const m = parseFloat(_('cg-neto').value)||0, a = parseFloat(_('cg-iva').value)||0;
+  _('cg-iva-c').value = a ? '$'+fmt(m*(a/100)) : '$0';
 }
-function renderGastos(){
-  const desde=_('cl-desde').value,hasta=_('cl-hasta').value,est=_('cl-est').value;
-  let lista=GASTOS.slice();
-  if(desde) lista=lista.filter(g=>g.fechaPago>=desde);
-  if(hasta) lista=lista.filter(g=>g.fechaPago<=hasta);
-  if(est) lista=lista.filter(g=>g.est===est);
-  const totNeto=lista.reduce((a,g)=>a+g.neto,0),totIva=lista.reduce((a,g)=>a+g.neto*(g.al/100),0),pend=lista.filter(g=>g.est==='Pendiente').reduce((a,g)=>a+g.neto,0);
-  _('cos-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Total neto gastos</div><div class="stat-val">$${fmt(totNeto)}</div></div><div class="stat"><div class="stat-lbl">IVA crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div><div class="stat"><div class="stat-lbl">Pendiente de pago</div><div class="stat-val" style="color:var(--orange)">$${fmt(pend)}</div></div>`;
-  _('cos-tbody').innerHTML=lista.map(g=>{const iva=g.neto*(g.al/100),venc=g.est==='Pendiente'&&g.fechaPago<HOY;return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${g.id}</td><td>${fmtD(g.fecha)}</td><td>${g.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${g.sop||'General'}</td><td>${g.desc||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iva)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto+iva)}</td><td><span class="bdg ${g.est==='Pagado'?'bdg-ok':venc?'bdg-err':'bdg-w'}">${g.est}</span></td><td style="font-size:11px;color:${venc?'var(--red)':'var(--text3)'}">${fmtD(g.fechaPago)}</td></tr>`;}).join('')||`<tr><td colspan="10" class="empty">Sin gastos.</td></tr>`;
+async function guardarGasto() {
+  const fecha = _('cg-fecha').value, neto = parseFloat(_('cg-neto').value)||0;
+  if (!fecha || !neto) { alert('Ingresá fecha y monto.'); return; }
+  const al = parseFloat(_('cg-iva').value)||0;
+  const g = {
+    id: 'G-'+(GASTOS.length+1).toString().padStart(3,'0'),
+    fecha, fechaPago: _('cg-fpago').value || fecha,
+    cat: _('cg-cat').value, sop: _('cg-sop').value, desc: _('cg-desc').value,
+    neto, al, est: _('cg-est').value, pago: _('cg-pago').value
+  };
+  try {
+    if (URL_GS) await api('saveCosto', {
+      fecha: g.fecha, fechaPago: g.fechaPago, soporte: g.sop, categoria: g.cat,
+      descripcion: g.desc, monto: g.neto, formaPago: g.pago
+    });
+    GASTOS.push(g); save(LS.gastos, GASTOS);
+    flash('cg-ok'); resetGasto(); renderIva();
+  } catch(e) { flashErr('cg-err', e.message); }
+}
+function resetGasto() {
+  ['cg-fecha','cg-fpago','cg-neto','cg-desc','cg-iva-c'].forEach(id=>_(id).value='');
+  _('cg-iva').value='0'; _('cg-sop').value=''; _('cg-est').value='Pagado';
+}
+async function syncGastos() {
+  if (!URL_GS) return;
+  try {
+    const r = await api('getCostos');
+    GASTOS = r.data.map(g=>({
+      id:   g['ID Gasto'], fecha: g['Fecha'], fechaPago: g['Fecha Pago Efectivo']||g['Fecha'],
+      cat:  g['Categoría Costo']||'', sop: g['Ubicación']||'', desc: g['Descripción']||'',
+      neto: Number(g['Monto Neto de IVA'])||0, al: 0,
+      est:  g['Estado de Pago']||'', pago: g['Forma de Pago']||''
+    }));
+    save(LS.gastos, GASTOS); renderGastos(); renderIva();
+  } catch(e) { alert('Error: '+e.message); }
+}
+function renderGastos() {
+  const desde=_('cl-desde').value, hasta=_('cl-hasta').value, est=_('cl-est').value;
+  let lista = GASTOS.slice();
+  if (desde) lista = lista.filter(g => g.fechaPago >= desde);
+  if (hasta) lista = lista.filter(g => g.fechaPago <= hasta);
+  if (est)   lista = lista.filter(g => g.est === est);
+  const totNeto = lista.reduce((a,g)=>a+g.neto, 0);
+  const totIva  = lista.reduce((a,g)=>a+g.neto*(g.al/100), 0);
+  const pend    = lista.filter(g=>g.est==='Pendiente').reduce((a,g)=>a+g.neto, 0);
+  _('cos-kpis').innerHTML = `
+    <div class="stat"><div class="stat-lbl">Total neto gastos</div><div class="stat-val">$${fmt(totNeto)}</div></div>
+    <div class="stat"><div class="stat-lbl">IVA crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div>
+    <div class="stat"><div class="stat-lbl">Pendiente de pago</div><div class="stat-val" style="color:var(--orange)">$${fmt(pend)}</div></div>
+  `;
+  _('cos-tbody').innerHTML = lista.map(g => {
+    const iva = g.neto*(g.al/100);
+    const venc = g.est==='Pendiente' && g.fechaPago < HOY;
+    return `<tr>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${g.id}</td>
+      <td>${fmtD(g.fecha)}</td>
+      <td>${g.cat||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${g.sop||'General'}</td>
+      <td>${g.desc||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iva)}</td>
+      <td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto+iva)}</td>
+      <td><span class="bdg ${g.est==='Pagado'?'bdg-ok':venc?'bdg-err':'bdg-w'}">${g.est}</span></td>
+      <td style="font-size:11px;color:${venc?'var(--red)':'var(--text3)'}">${fmtD(g.fechaPago)}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="10" class="empty">Sin gastos para este filtro.</td></tr>`;
 }
 
 // ── INVERSIONES ───────────────────────────────────────────
-let invTab='form';
-function setInvTab(t,el){invTab=t;document.querySelectorAll('#page-inversiones .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');_('inv-form').style.display=t==='form'?'block':'none';_('inv-lista').style.display=t==='lista'?'block':'none';if(t==='lista') renderInvLista();}
-function calcDeprec(){const m=parseFloat(_('iv-monto').value)||0,v=parseInt(_('iv-vida').value)||60,r=parseFloat(_('iv-resid').value)||0;_('iv-dep').value=v>0?'$'+fmt(Math.round((m-r)/v))+'/mes':'—';}
-async function guardarInv(){
-  const fecha=_('iv-fecha').value,monto=parseFloat(_('iv-monto').value)||0;
-  if(!fecha||!monto){alert('Ingresá fecha y monto.');return;}
-  const vida=parseInt(_('iv-vida').value)||60,resid=parseFloat(_('iv-resid').value)||0;
-  const dep=vida>0?Math.round((monto-resid)/vida):0;
-  const inv={id:'I-'+(INVS.length+1).toString().padStart(2,'0'),fecha,sop:_('iv-sop').value,cat:_('iv-cat').value,desc:_('iv-desc').value,prov:_('iv-prov').value,monto,iva:parseFloat(_('iv-iva').value)||0,vida,resid,dep};
-  try{
-    if(URL_GS) await api('saveInversion',{fecha:inv.fecha,soporte:inv.sop,categoria:inv.cat,descripcion:inv.desc,proveedor:inv.prov,monto:inv.monto,iva:inv.iva,vidaUtil:inv.vida,valorResidual:inv.resid});
-    INVS.push(inv);save(LS.inv,INVS);flash('inv-ok');resetInv();renderIva();
-  }catch(e){flashErr('inv-err',e.message);}
+let invTab = 'form';
+function setInvTab(t,el) {
+  invTab=t;
+  document.querySelectorAll('#page-inversiones .stab').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  _('inv-form').style.display  = t==='form'  ? 'block':'none';
+  _('inv-lista').style.display = t==='lista' ? 'block':'none';
+  if (t==='lista') renderInvLista();
 }
-function resetInv(){['iv-fecha','iv-cat','iv-prov','iv-desc','iv-monto','iv-iva','iv-vida','iv-resid','iv-dep'].forEach(id=>_(id).value='');}
-async function syncInversiones(){
-  if(!URL_GS) return;
-  try{
-    const r=await api('getInversiones');
-    INVS=r.data.map(i=>({id:i['ID Inversión'],fecha:i['Fecha Adquisición'],sop:i['ID Soporte'],cat:i['Categoría'],desc:i['Descripción'],prov:i['Proveedor'],monto:Number(i['Monto Inversión'])||0,iva:Number(i['IVA A FAVOR'])||0,vida:Number(i['Vida Útil (meses)'])||60,resid:Number(i['Valor Residual'])||0,dep:Number(i['Depreciación Mensual'])||0,estado:i['Estado']||'Activo'}));
-    save(LS.inv,INVS);renderInvLista();renderIva();
-  }catch(e){alert('Error inversiones: '+e.message);}
+function calcDeprec() {
+  const m = parseFloat(_('iv-monto').value)||0;
+  const v = parseInt(_('iv-vida').value)||60;
+  const r = parseFloat(_('iv-resid').value)||0;
+  _('iv-dep').value = v > 0 ? '$'+fmt(Math.round((m-r)/v))+'/mes' : '—';
 }
-function renderInvLista(){
-  const totMonto=INVS.reduce((a,i)=>a+Number(i.monto||0),0),totIva=INVS.reduce((a,i)=>a+Number(i.iva||0),0),totDep=INVS.reduce((a,i)=>a+Number(i.dep||0),0);
-  _('inv-cnt').textContent=INVS.length+' inversión'+(INVS.length!==1?'es':'');
-  _('inv-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Capital invertido</div><div class="stat-val">$${fmt(totMonto)}</div></div><div class="stat"><div class="stat-lbl">IVA a favor</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div><div class="stat"><div class="stat-lbl">Deprec. mensual</div><div class="stat-val" style="color:var(--orange)">$${fmt(totDep)}/mes</div></div>`;
-  _('inv-tbody').innerHTML=INVS.map(i=>{const dep=Number(i.dep)||(i.vida>0?Math.round((i.monto-i.resid)/i.vida):0);return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${i.id}</td><td>${fmtD(i.fecha)}</td><td><span class="bdg bdg-blu">${i.sop}</span></td><td>${i.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${i.desc||'—'}</td><td style="font-size:11px;color:var(--text2)">${i.prov||'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(i.monto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(i.iva)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--orange)">$${fmt(dep)}/mes</td><td><span class="bdg ${(i.estado||'Activo')==='Activo'?'bdg-ok':'bdg-neu'}">${i.estado||'Activo'}</span></td></tr>`;}).join('')||`<tr><td colspan="10" class="empty">Sin inversiones. Hacé clic en ↻ Sincronizar.</td></tr>`;
+async function guardarInv() {
+  const fecha = _('iv-fecha').value, monto = parseFloat(_('iv-monto').value)||0;
+  if (!fecha || !monto) { alert('Ingresá fecha y monto.'); return; }
+  const vida = parseInt(_('iv-vida').value)||60, resid = parseFloat(_('iv-resid').value)||0;
+  const dep = vida > 0 ? Math.round((monto-resid)/vida) : 0;
+  const inv = {
+    id: 'I-'+(INVS.length+1).toString().padStart(2,'0'),
+    fecha, sop: _('iv-sop').value, cat: _('iv-cat').value,
+    desc: _('iv-desc').value, prov: _('iv-prov').value,
+    monto, iva: parseFloat(_('iv-iva').value)||0, vida, resid, dep
+  };
+  try {
+    if (URL_GS) await api('saveInversion', {
+      fecha: inv.fecha, soporte: inv.sop, categoria: inv.cat, descripcion: inv.desc,
+      proveedor: inv.prov, monto: inv.monto, iva: inv.iva,
+      vidaUtil: inv.vida, valorResidual: inv.resid
+    });
+    INVS.push(inv); save(LS.inv, INVS);
+    flash('inv-ok'); resetInv(); renderIva();
+  } catch(e) { flashErr('inv-err', e.message); }
+}
+function resetInv() {
+  ['iv-fecha','iv-cat','iv-prov','iv-desc','iv-monto','iv-iva','iv-vida','iv-resid','iv-dep'].forEach(id=>_(id).value='');
+}
+async function syncInversiones() {
+  if (!URL_GS) return;
+  try {
+    const r = await api('getInversiones');
+    INVS = r.data.map(i=>({
+      id: i['ID Inversión'], fecha: i['Fecha Adquisición'],
+      sop: i['ID Soporte'], cat: i['Categoría'], desc: i['Descripción'],
+      prov: i['Proveedor'], monto: Number(i['Monto Inversión'])||0,
+      iva: Number(i['IVA A FAVOR'])||0, vida: Number(i['Vida Útil (meses)'])||60,
+      resid: Number(i['Valor Residual'])||0, dep: Number(i['Depreciación Mensual'])||0,
+      estado: i['Estado']||'Activo'
+    }));
+    save(LS.inv, INVS); renderInvLista(); renderIva();
+  } catch(e) { alert('Error: '+e.message); }
+}
+function renderInvLista() {
+  const totMonto = INVS.reduce((a,i)=>a+Number(i.monto||0),0);
+  const totIva   = INVS.reduce((a,i)=>a+Number(i.iva||0),0);
+  const totDep   = INVS.reduce((a,i)=>a+Number(i.dep||0),0);
+  _('inv-cnt').textContent = INVS.length+' inversión'+(INVS.length!==1?'es':'');
+  _('inv-kpis').innerHTML = `
+    <div class="stat"><div class="stat-lbl">Capital invertido</div><div class="stat-val">$${fmt(totMonto)}</div><div class="stat-sub">${INVS.length} activos</div></div>
+    <div class="stat"><div class="stat-lbl">IVA a favor (total)</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div>
+    <div class="stat"><div class="stat-lbl">Depreciación mensual</div><div class="stat-val" style="color:var(--orange)">$${fmt(totDep)}/mes</div><div class="stat-sub">impacto en costos</div></div>
+  `;
+  _('inv-tbody').innerHTML = INVS.map(i => {
+    const dep = Number(i.dep)||(i.vida>0?Math.round((i.monto-i.resid)/i.vida):0);
+    return `<tr>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${i.id}</td>
+      <td>${fmtD(i.fecha)}</td>
+      <td><span class="bdg bdg-blu">${i.sop}</span></td>
+      <td>${i.cat||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${i.desc||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${i.prov||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(i.monto)}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(i.iva)}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--orange)">$${fmt(dep)}/mes</td>
+      <td><span class="bdg ${(i.estado||'Activo')==='Activo'?'bdg-ok':'bdg-neu'}">${i.estado||'Activo'}</span></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="10" class="empty">Sin inversiones registradas.</td></tr>`;
 }
 
 // ── IVA ───────────────────────────────────────────────────
-function setIvaTab(t,el){document.querySelectorAll('#page-iva .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');['res','deb','cred'].forEach(x=>_('iva-'+x).style.display=x===t?'block':'none');}
-function renderIva(){
-  const deb=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+ivaC(Number(c.monto||0),Number(c.ivaAl||0)),0);
-  const credG=GASTOS.reduce((a,g)=>a+g.neto*(g.al/100),0),credI=INVS.reduce((a,i)=>a+Number(i.iva||0),0),cred=credG+credI;
-  const saldo=deb-cred,futIva=COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+ivaC(Number(c.monto||0),Number(c.ivaAl||0)),0);
-  _('iva-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Débito fiscal</div><div class="stat-val" style="color:var(--red)">$${fmt(deb)}</div><div class="stat-sub">IVA cobros realizados</div></div><div class="stat"><div class="stat-lbl">Crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(cred)}</div><div class="stat-sub">Gastos + Inversiones</div></div><div class="stat"><div class="stat-lbl">Saldo IVA</div><div class="stat-val" style="color:${saldo>0?'var(--orange)':'var(--green)'}">$${fmt(Math.abs(saldo))}</div><div class="stat-sub">${saldo>0?'a pagar al fisco':'a tu favor'}</div></div><div class="stat"><div class="stat-lbl">IVA futuro</div><div class="stat-val" style="color:var(--blue)">$${fmt(futIva)}</div><div class="stat-sub">en cobros programados</div></div>`;
-  const meses={};
-  COBROS.forEach(c=>{const k=(c.fecha||'').slice(0,7);if(!k) return;if(!meses[k]) meses[k]={mes:k,deb:0,cred:0};meses[k].deb+=ivaC(Number(c.monto||0),Number(c.ivaAl||0));});
-  GASTOS.forEach(g=>{const k=(g.fecha||'').slice(0,7);if(!k) return;if(!meses[k]) meses[k]={mes:k,deb:0,cred:0};meses[k].cred+=g.neto*(g.al/100);});
-  INVS.forEach(i=>{const k=(i.fecha||'').slice(0,7);if(!k) return;if(!meses[k]) meses[k]={mes:k,deb:0,cred:0};meses[k].cred+=Number(i.iva||0);});
-  const arr=Object.values(meses).sort((a,b)=>a.mes.localeCompare(b.mes));
-  const maxV=Math.max(...arr.map(m=>Math.max(m.deb,m.cred)),1);
-  _('iva-chart').innerHTML=arr.length?arr.map(m=>{const s=m.deb-m.cred;return`<div class="iva-row"><span style="color:var(--text2);font-size:10.5px">${m.mes}</span><div style="position:relative;height:12px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.round((m.deb/maxV)*100)}%;background:var(--red);opacity:.8;border-radius:3px"></div><div style="position:absolute;bottom:0;left:0;height:5px;width:${Math.round((m.cred/maxV)*100)}%;background:var(--green);border-radius:3px"></div></div><span style="font-family:'IBM Plex Mono',monospace;color:var(--red);font-size:11px">-$${fmt(m.deb)}</span><span style="font-family:'IBM Plex Mono',monospace;color:var(--green);font-size:11px">+$${fmt(m.cred)}</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:${s>0?'var(--orange)':'var(--green)'}">=$${fmt(Math.abs(s))}</span></div>`;}).join(''):`<div class="empty">Sin datos de IVA aún.</div>`;
-  _('iva-deb-body').innerHTML=COBROS.map(c=>{const ivM=ivaC(Number(c.monto||0),Number(c.ivaAl||0)),neto=Number(c.monto||0)-ivM,fut=c.fecha>HOY;return`<tr><td style="color:${fut?'var(--blue)':'inherit'}">${fmtD(c.fecha)}${fut?' →':''}</td><td style="font-weight:500">${c.cliente||'—'}</td><td style="font-size:11px">${c.orden||'—'}</td><td style="font-size:11px">${c.factura||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--red)">$${fmt(ivM)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(c.monto)}</td></tr>`;}).join('')||`<tr><td colspan="7" class="empty">Sin cobros.</td></tr>`;
-  const credRows=[...GASTOS.filter(g=>g.al>0).map(g=>{const iv=g.neto*(g.al/100);return`<tr><td>${fmtD(g.fecha)}</td><td><span class="bdg bdg-neu">Gasto</span></td><td>${g.cat||''}${g.desc?' · '+g.desc:''}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iv)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto+iv)}</td></tr>`;}),
-    ...INVS.filter(i=>Number(i.iva)>0).map(i=>`<tr><td>${fmtD(i.fecha)}</td><td><span class="bdg bdg-blu">Inversión</span></td><td>${i.cat||''}${i.desc?' · '+i.desc:''}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(i.monto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(i.iva)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(Number(i.monto)+Number(i.iva))}</td></tr>`)
+let ivaTabAct = 'res';
+function setIvaTab(t,el) {
+  ivaTabAct = t;
+  document.querySelectorAll('#page-iva .stab').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  ['res','deb','cred'].forEach(x => _('iva-'+x).style.display = x===t?'block':'none');
+}
+function renderIva() {
+  // KPIs
+  const deb   = COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+ivaC(Number(c.monto||0),Number(c.ivaAl||0)),0);
+  const credG = GASTOS.reduce((a,g)=>a+g.neto*(g.al/100),0);
+  const credI = INVS.reduce((a,i)=>a+Number(i.iva||0),0);
+  const cred  = credG + credI;
+  const saldo = deb - cred;
+  const futIva= COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+ivaC(Number(c.monto||0),Number(c.ivaAl||0)),0);
+  _('iva-kpis').innerHTML = `
+    <div class="stat"><div class="stat-lbl">Débito fiscal</div><div class="stat-val" style="color:var(--red)">$${fmt(deb)}</div><div class="stat-sub">IVA cobros realizados</div></div>
+    <div class="stat"><div class="stat-lbl">Crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(cred)}</div><div class="stat-sub">Gastos + Inversiones</div></div>
+    <div class="stat"><div class="stat-lbl">Saldo IVA</div><div class="stat-val" style="color:${saldo>0?'var(--orange)':'var(--green)'}">$${fmt(Math.abs(saldo))}</div><div class="stat-sub">${saldo>0?'a pagar al fisco':'a tu favor'}</div></div>
+    <div class="stat"><div class="stat-lbl">IVA futuro</div><div class="stat-val" style="color:var(--blue)">$${fmt(futIva)}</div><div class="stat-sub">en cobros programados</div></div>
+  `;
+  // Chart mensual
+  const meses = {};
+  COBROS.forEach(c => {
+    const k = (c.fecha||'').slice(0,7); if(!k) return;
+    if (!meses[k]) meses[k] = {mes:k,deb:0,cred:0};
+    meses[k].deb += ivaC(Number(c.monto||0), Number(c.ivaAl||0));
+  });
+  GASTOS.forEach(g => {
+    const k = (g.fecha||'').slice(0,7); if(!k) return;
+    if (!meses[k]) meses[k] = {mes:k,deb:0,cred:0};
+    meses[k].cred += g.neto*(g.al/100);
+  });
+  INVS.forEach(i => {
+    const k = (i.fecha||'').slice(0,7); if(!k) return;
+    if (!meses[k]) meses[k] = {mes:k,deb:0,cred:0};
+    meses[k].cred += Number(i.iva||0);
+  });
+  const arr = Object.values(meses).sort((a,b)=>a.mes.localeCompare(b.mes));
+  const maxV = Math.max(...arr.map(m=>Math.max(m.deb,m.cred)), 1);
+  _('iva-chart').innerHTML = arr.length ? arr.map(m => {
+    const s = m.deb - m.cred;
+    return `<div class="iva-row">
+      <span style="color:var(--text2);font-size:10.5px">${m.mes}</span>
+      <div style="position:relative;height:12px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round((m.deb/maxV)*100)}%;background:var(--red);opacity:.8;border-radius:3px"></div>
+        <div style="position:absolute;bottom:0;left:0;height:5px;width:${Math.round((m.cred/maxV)*100)}%;background:var(--green);border-radius:3px"></div>
+      </div>
+      <span style="font-family:'IBM Plex Mono',monospace;color:var(--red);font-size:11px">-$${fmt(m.deb)}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;color:var(--green);font-size:11px">+$${fmt(m.cred)}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:${s>0?'var(--orange)':'var(--green)'}">=$${fmt(Math.abs(s))}</span>
+    </div>`;
+  }).join('') : `<div class="empty">Sin datos de IVA aún. Registrá cobros y gastos para ver el resumen.</div>`;
+  // Tabla débito
+  _('iva-deb-body').innerHTML = COBROS.map(c => {
+    const ivaMonto = ivaC(Number(c.monto||0), Number(c.ivaAl||0));
+    const neto = Number(c.monto||0) - ivaMonto;
+    const fut  = c.fecha > HOY;
+    return `<tr>
+      <td style="color:${fut?'var(--blue)':'inherit'}">${fmtD(c.fecha)}${fut?' →':''}</td>
+      <td style="font-weight:500">${c.cliente||'—'}</td>
+      <td style="font-size:11px">${c.orden||'—'}</td>
+      <td style="font-size:11px">${c.factura||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace">$${fmt(neto)}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--red)">$${fmt(ivaMonto)}</td>
+      <td style="font-family:'IBM Plex Mono',monospace">$${fmt(c.monto)}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7" class="empty">Sin cobros registrados.</td></tr>`;
+  // Tabla crédito
+  const credRows = [
+    ...GASTOS.filter(g=>g.al>0).map(g => {
+      const iv = g.neto*(g.al/100);
+      return `<tr><td>${fmtD(g.fecha)}</td><td><span class="bdg bdg-neu">Gasto</span></td><td>${g.cat||''}${g.desc?' · '+g.desc:''}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iv)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto+iv)}</td></tr>`;
+    }),
+    ...INVS.filter(i=>Number(i.iva)>0).map(i => {
+      return `<tr><td>${fmtD(i.fecha)}</td><td><span class="bdg bdg-blu">Inversión</span></td><td>${i.cat||''}${i.desc?' · '+i.desc:''}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(i.monto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(i.iva)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(Number(i.monto)+Number(i.iva))}</td></tr>`;
+    })
   ];
-  _('iva-cred-body').innerHTML=credRows.join('')||`<tr><td colspan="6" class="empty">Sin gastos o inversiones con IVA.</td></tr>`;
+  _('iva-cred-body').innerHTML = credRows.join('') || `<tr><td colspan="6" class="empty">Sin gastos o inversiones con IVA.</td></tr>`;
 }
 
 // ── INIT ──────────────────────────────────────────────────
 buildChips();
 buildCliSelect();
 renderDash();
-renderDispGrid();
-if(URL_GS) testConn();
-else document.getElementById('cfg').style.display='flex';
+if (URL_GS) testConn();
 </script>
 </body>
 </html>
