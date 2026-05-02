@@ -625,13 +625,16 @@ function saveUrl() {
 
 async function api(action, payload={}) {
   if (!SHEET_URL) throw new Error('Sin URL configurada');
-  const url = SHEET_URL + '?action=' + action;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, ...payload })
+  // Apps Script solo acepta GET con parámetros para evitar CORS
+  const params = new URLSearchParams({
+    action,
+    payload: JSON.stringify(payload)
   });
-  const data = await res.json();
+  const url = SHEET_URL + '?' + params.toString();
+  const res = await fetch(url, { redirect: 'follow' });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch(e) { throw new Error('Respuesta inválida del servidor'); }
   if (!data.ok) throw new Error(data.error || 'Error desconocido');
   return data;
 }
