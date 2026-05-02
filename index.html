@@ -102,7 +102,7 @@ body {
 .config-banner input::placeholder { color: rgba(255,255,255,.3); }
 
 /* PAGES */
-.page { display: none; padding: 20px; }
+.page { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
 .page.active { display: block; }
 
 /* STAT GRID */
@@ -163,7 +163,7 @@ body {
   color: var(--text); font-family: 'DM Sans', sans-serif;
   white-space: nowrap; transition: border-color .15s;
 }
-.btn-s:hover { border-color: var(--border2); background: var(--bg2); }
+.btn-s:hover { border-color: var(--accent); background: var(--bg2); }
 
 /* SOPORTES GRID */
 .sop-grid-dash {
@@ -176,7 +176,6 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px;
-  cursor: default;
   transition: border-color .15s;
 }
 .sop-card:hover { border-color: var(--border2); }
@@ -247,12 +246,12 @@ body {
 .avp-row:last-child { border-bottom: none; }
 
 /* TABLES */
-.tbl-wrap { overflow-x: auto; }
+.tbl-wrap { overflow-x: auto; border-radius: var(--radius); }
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 th { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; background: var(--bg2); }
 td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--bg2); }
+tr:hover td { background: rgba(255,255,255,.02); }
 
 /* COBRANZA CARDS */
 .cob-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
@@ -262,7 +261,7 @@ tr:hover td { background: var(--bg2); }
 .cuota-row {
   display: flex; justify-content: space-between; align-items: center;
   font-size: 12px; padding: 6px 8px; border-radius: var(--radius-sm);
-  cursor: default; margin-bottom: 2px;
+  margin-bottom: 2px;
 }
 .cuota-row:hover { background: var(--bg3); }
 .cuota-chk { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border2); display: inline-flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
@@ -292,6 +291,9 @@ tr:hover td { background: var(--bg2); }
 /* SPINNER */
 .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 6px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* FORM CARD WRAPPER */
+.form-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
 </style>
 </head>
 <body>
@@ -313,6 +315,7 @@ tr:hover td { background: var(--bg2); }
   <button class="tab" onclick="go('cobranzas',this)">Cobranzas</button>
   <button class="tab" onclick="go('nueva-cob',this)">+ Cobro</button>
   <button class="tab" onclick="go('costos',this)">Costos</button>
+  <button class="tab" onclick="go('inversiones',this)">Inversiones</button>
   <button class="tab" onclick="go('iva',this)">IVA</button>
   <button class="tab" onclick="go('proy',this)">Proyecciones</button>
 </div>
@@ -362,32 +365,34 @@ tr:hover td { background: var(--bg2); }
   <div class="suc" id="nv-suc">✓ Venta guardada en tu Google Sheet.</div>
   <div class="err-msg" id="nv-err"></div>
   <div id="nv-loading" class="loading" style="display:none"><span class="spinner"></span>Guardando en Sheets...</div>
-  <div class="fg2">
-    <div class="fld"><label>N° Orden de publicidad</label><input type="text" id="nv-orden" placeholder="OP-2025-001"></div>
-    <div class="fld"><label>Cliente / Anunciante</label><input type="text" id="nv-cli" placeholder="Farmacia Del Centro"></div>
-    <div class="fld full"><label>Soportes — seleccioná uno o más</label>
-      <div class="sop-chips" id="sop-chips"></div>
+  <div class="form-wrap">
+    <div class="fg2">
+      <div class="fld"><label>N° Orden de publicidad</label><input type="text" id="nv-orden" placeholder="OP-2025-001"></div>
+      <div class="fld"><label>Cliente / Anunciante</label><input type="text" id="nv-cli" placeholder="Farmacia Del Centro"></div>
+      <div class="fld full"><label>Soportes — seleccioná uno o más</label>
+        <div class="sop-chips" id="sop-chips"></div>
+      </div>
+      <div class="fld"><label>Fecha inicio</label><input type="date" id="nv-ini" oninput="checkAv()"></div>
+      <div class="fld"><label>Fecha fin</label><input type="date" id="nv-fin" oninput="checkAv()"></div>
+      <div class="fld"><label>Pases por día (por soporte)</label><input type="number" id="nv-pases" min="1" max="2880" placeholder="240" oninput="checkAv()"></div>
+      <div class="fld"><label>Total facturado ($)</label><input type="number" id="nv-total" placeholder="180000"></div>
+      <div class="fld"><label>N° Factura (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
+      <div class="fld"><label>Estado de cobro</label>
+        <select id="nv-cobro"><option>Pendiente</option><option>Parcialmente cobrado</option><option>Cobrado</option></select>
+      </div>
+      <div class="fld"><label>Forma de pago</label>
+        <select id="nv-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
+      </div>
+      <div class="fld"><label>Estado campaña</label>
+        <select id="nv-est"><option>Activa</option><option>Pendiente</option></select>
+      </div>
+      <div class="fld full"><label>Observaciones</label><textarea id="nv-obs" placeholder="Notas internas..."></textarea></div>
+      <div class="avp" id="nv-avp"></div>
     </div>
-    <div class="fld"><label>Fecha inicio</label><input type="date" id="nv-ini" oninput="checkAv()"></div>
-    <div class="fld"><label>Fecha fin</label><input type="date" id="nv-fin" oninput="checkAv()"></div>
-    <div class="fld"><label>Pases por día (por soporte)</label><input type="number" id="nv-pases" min="1" max="2880" placeholder="240" oninput="checkAv()"></div>
-    <div class="fld"><label>Total facturado ($) — monto acordado</label><input type="number" id="nv-total" placeholder="180000"></div>
-    <div class="fld"><label>N° Factura (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
-    <div class="fld"><label>Estado de cobro</label>
-      <select id="nv-cobro"><option>Pendiente</option><option>Parcialmente cobrado</option><option>Cobrado</option></select>
+    <div class="fa">
+      <button class="btn-s" onclick="resetNV()">Limpiar</button>
+      <button class="btn-p" onclick="guardarVenta()">Guardar en Sheets</button>
     </div>
-    <div class="fld"><label>Forma de pago</label>
-      <select id="nv-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
-    </div>
-    <div class="fld"><label>Estado campaña</label>
-      <select id="nv-est"><option>Activa</option><option>Pendiente</option></select>
-    </div>
-    <div class="fld full"><label>Observaciones</label><textarea id="nv-obs" placeholder="Notas internas..."></textarea></div>
-    <div class="avp" id="nv-avp"></div>
-  </div>
-  <div class="fa">
-    <button class="btn-s" onclick="resetNV()">Limpiar</button>
-    <button class="btn-p" onclick="guardarVenta()">Guardar en Sheets</button>
   </div>
 </div>
 
@@ -408,37 +413,39 @@ tr:hover td { background: var(--bg2); }
   <div class="suc" id="nc-suc">✓ Cobro registrado en tu Google Sheet.</div>
   <div class="err-msg" id="nc-err"></div>
   <div id="nc-loading" class="loading" style="display:none"><span class="spinner"></span>Guardando...</div>
-  <div class="fg2">
-    <div class="fld"><label>Cliente</label>
-      <select id="nc-cli" onchange="fillOrden()">
-        <option value="">Seleccionar cliente...</option>
-      </select>
+  <div class="form-wrap">
+    <div class="fg2">
+      <div class="fld"><label>Cliente</label>
+        <select id="nc-cli" onchange="fillOrden()">
+          <option value="">Seleccionar cliente...</option>
+        </select>
+      </div>
+      <div class="fld"><label>Orden de publicidad</label>
+        <select id="nc-orden"><option>— elegí cliente primero —</option></select>
+      </div>
+      <div class="fld"><label>Fecha de cobro</label>
+        <input type="date" id="nc-fecha">
+        <div class="hint">Podés poner fecha futura para programar cobros.</div>
+      </div>
+      <div class="fld"><label>Monto ($)</label><input type="number" id="nc-monto" placeholder="0" oninput="calcIvaCobro()"></div>
+      <div class="fld"><label>IVA incluido en el monto</label>
+        <select id="nc-iva" onchange="calcIvaCobro()">
+          <option value="0">Sin IVA / Exento</option>
+          <option value="21">21%</option>
+          <option value="10.5">10.5%</option>
+        </select>
+      </div>
+      <div class="fld"><label>IVA calculado ($)</label><input type="text" id="nc-iva-calc" readonly></div>
+      <div class="fld"><label>N° Factura</label><input type="text" id="nc-fac" placeholder="A-0001-00000123"></div>
+      <div class="fld"><label>Forma de pago</label>
+        <select id="nc-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
+      </div>
+      <div class="fld full"><label>Observaciones</label><input type="text" id="nc-obs" placeholder="Cuota 1 de 2, etc."></div>
     </div>
-    <div class="fld"><label>Orden de publicidad</label>
-      <select id="nc-orden"><option>— elegí cliente primero —</option></select>
+    <div class="fa">
+      <button class="btn-s" onclick="resetNC()">Limpiar</button>
+      <button class="btn-p" onclick="guardarCobro()">Registrar cobro</button>
     </div>
-    <div class="fld"><label>Fecha de cobro</label>
-      <input type="date" id="nc-fecha">
-      <div class="hint">Podés poner fecha futura para programar cobros.</div>
-    </div>
-    <div class="fld"><label>Monto ($)</label><input type="number" id="nc-monto" placeholder="0" oninput="calcIvaCobro()"></div>
-    <div class="fld"><label>IVA incluido en el monto</label>
-      <select id="nc-iva" onchange="calcIvaCobro()">
-        <option value="0">Sin IVA / Exento</option>
-        <option value="21">21%</option>
-        <option value="10.5">10.5%</option>
-      </select>
-    </div>
-    <div class="fld"><label>IVA calculado ($)</label><input type="text" id="nc-iva-calc" readonly></div>
-    <div class="fld"><label>N° Factura</label><input type="text" id="nc-fac" placeholder="A-0001-00000123"></div>
-    <div class="fld"><label>Forma de pago</label>
-      <select id="nc-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
-    </div>
-    <div class="fld full"><label>Observaciones</label><input type="text" id="nc-obs" placeholder="Cuota 1 de 2, etc."></div>
-  </div>
-  <div class="fa">
-    <button class="btn-s" onclick="resetNC()">Limpiar</button>
-    <button class="btn-p" onclick="guardarCobro()">Registrar cobro</button>
   </div>
 </div>
 
@@ -447,48 +454,49 @@ tr:hover td { background: var(--bg2); }
   <div class="sub-tabs">
     <button class="sub-tab active" onclick="setCosTab('gasto',this)">Registrar gasto</button>
     <button class="sub-tab" onclick="setCosTab('lista',this)">Ver gastos</button>
-    <button class="sub-tab" onclick="setCosTab('inv',this)">Inversiones</button>
   </div>
   <div id="cos-gasto">
     <div class="suc" id="cg-suc">✓ Gasto registrado.</div>
-    <div class="fg2">
-      <div class="fld"><label>Fecha</label><input type="date" id="cg-fecha"></div>
-      <div class="fld"><label>Categoría</label>
-        <select id="cg-cat">
-          <option>Alquiler Locación</option><option>Luz</option><option>Internet</option>
-          <option>Mantenimiento</option><option>RRHH / Sueldos</option><option>Caja chica</option>
-          <option>Impuestos</option><option>Otro</option>
-        </select>
+    <div class="form-wrap">
+      <div class="fg2">
+        <div class="fld"><label>Fecha</label><input type="date" id="cg-fecha"></div>
+        <div class="fld"><label>Categoría</label>
+          <select id="cg-cat">
+            <option>Alquiler Locación</option><option>Luz</option><option>Internet</option>
+            <option>Mantenimiento</option><option>RRHH / Sueldos</option><option>Caja chica</option>
+            <option>Impuestos</option><option>Otro</option>
+          </select>
+        </div>
+        <div class="fld"><label>Soporte (opcional)</label>
+          <select id="cg-sop">
+            <option value="">General</option>
+            <option>T1-P1</option><option>T2-P1</option><option>T2-P2</option><option>T3-P1</option>
+            <option>T3-P2</option><option>T4-P1</option><option>T4-P2</option><option>T5-P1</option>
+            <option>T5-P2</option><option>T6-P1</option><option>T6-P2</option><option>T7-P1</option>
+            <option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
+          </select>
+        </div>
+        <div class="fld"><label>Descripción</label><input type="text" id="cg-desc" placeholder="Ej: Reparación pantalla LED"></div>
+        <div class="fld"><label>Monto neto ($)</label><input type="number" id="cg-monto" placeholder="0" oninput="calcIvaGasto()"></div>
+        <div class="fld"><label>IVA</label>
+          <select id="cg-iva" onchange="calcIvaGasto()">
+            <option value="0">Sin IVA</option><option value="21">21%</option><option value="10.5">10.5%</option>
+          </select>
+        </div>
+        <div class="fld"><label>IVA ($)</label><input type="text" id="cg-iva-calc" readonly></div>
+        <div class="fld"><label>Estado de pago</label>
+          <select id="cg-est"><option>Pagado</option><option>Pendiente</option></select>
+        </div>
+        <div class="fld"><label>Fecha de pago / vencimiento</label>
+          <input type="date" id="cg-fecha-pago">
+          <div class="hint">Podés ingresar pagos futuros para proyecciones.</div>
+        </div>
+        <div class="fld"><label>Forma de pago</label>
+          <select id="cg-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
+        </div>
       </div>
-      <div class="fld"><label>Soporte (opcional — si es general dejá vacío)</label>
-        <select id="cg-sop">
-          <option value="">General</option>
-          <option>T1-P1</option><option>T2-P1</option><option>T2-P2</option><option>T3-P1</option>
-          <option>T3-P2</option><option>T4-P1</option><option>T4-P2</option><option>T5-P1</option>
-          <option>T5-P2</option><option>T6-P1</option><option>T6-P2</option><option>T7-P1</option>
-          <option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
-        </select>
-      </div>
-      <div class="fld"><label>Descripción</label><input type="text" id="cg-desc" placeholder="Ej: Reparación pantalla LED"></div>
-      <div class="fld"><label>Monto neto ($)</label><input type="number" id="cg-monto" placeholder="0" oninput="calcIvaGasto()"></div>
-      <div class="fld"><label>IVA</label>
-        <select id="cg-iva" onchange="calcIvaGasto()">
-          <option value="0">Sin IVA</option><option value="21">21%</option><option value="10.5">10.5%</option>
-        </select>
-      </div>
-      <div class="fld"><label>IVA ($)</label><input type="text" id="cg-iva-calc" readonly></div>
-      <div class="fld"><label>Estado de pago</label>
-        <select id="cg-est"><option>Pagado</option><option>Pendiente</option></select>
-      </div>
-      <div class="fld"><label>Fecha de pago / vencimiento</label>
-        <input type="date" id="cg-fecha-pago">
-        <div class="hint">Podés ingresar pagos futuros para proyecciones.</div>
-      </div>
-      <div class="fld"><label>Forma de pago</label>
-        <select id="cg-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
-      </div>
+      <div class="fa"><button class="btn-p" onclick="guardarGasto()">Registrar gasto</button></div>
     </div>
-    <div class="fa"><button class="btn-p" onclick="guardarGasto()">Registrar gasto</button></div>
   </div>
   <div id="cos-lista" style="display:none">
     <div class="fb">
@@ -509,30 +517,64 @@ tr:hover td { background: var(--bg2); }
       </table>
     </div>
   </div>
-  <div id="cos-inv" style="display:none">
-    <div class="suc" id="inv-suc">✓ Inversión registrada.</div>
-    <div class="fg2">
-      <div class="fld"><label>Fecha adquisición</label><input type="date" id="inv-fecha"></div>
-      <div class="fld"><label>Soporte</label>
-        <select id="inv-sop">
-          <option>T1-P1</option><option>T2-P1</option><option>T2-P2</option><option>T3-P1</option>
-          <option>T3-P2</option><option>T4-P1</option><option>T4-P2</option><option>T5-P1</option>
-          <option>T5-P2</option><option>T6-P1</option><option>T6-P2</option><option>T7-P1</option>
-          <option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
-        </select>
+</div>
+
+<!-- ── INVERSIONES ──────────────────────────────────────── -->
+<div class="page" id="page-inversiones">
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="setInvTab('nueva',this)">Nueva inversión</button>
+    <button class="sub-tab" onclick="setInvTab('lista',this)">Ver inversiones</button>
+  </div>
+
+  <div id="inv-nueva">
+    <div class="suc" id="inv-suc">✓ Inversión registrada en Google Sheets.</div>
+    <div class="err-msg" id="inv-err"></div>
+    <div id="inv-loading" class="loading" style="display:none"><span class="spinner"></span>Guardando...</div>
+    <div class="form-wrap">
+      <div class="fg2">
+        <div class="fld"><label>Fecha adquisición</label><input type="date" id="inv-fecha"></div>
+        <div class="fld"><label>Soporte</label>
+          <select id="inv-sop">
+            <option>T1-P1</option><option>T2-P1</option><option>T2-P2</option><option>T3-P1</option>
+            <option>T3-P2</option><option>T4-P1</option><option>T4-P2</option><option>T5-P1</option>
+            <option>T5-P2</option><option>T6-P1</option><option>T6-P2</option><option>T7-P1</option>
+            <option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
+          </select>
+        </div>
+        <div class="fld"><label>Categoría</label><input type="text" id="inv-cat" placeholder="Pantalla LED, Estructura, etc."></div>
+        <div class="fld"><label>Proveedor</label><input type="text" id="inv-prov" placeholder="Nombre del proveedor"></div>
+        <div class="fld"><label>Descripción</label><input type="text" id="inv-desc" placeholder="Detalle de la inversión"></div>
+        <div class="fld"><label>Monto inversión ($)</label><input type="number" id="inv-monto" placeholder="0"></div>
+        <div class="fld"><label>IVA a favor ($)</label><input type="number" id="inv-iva" placeholder="0"></div>
+        <div class="fld"><label>Vida útil (meses)</label>
+          <input type="number" id="inv-vida" placeholder="60">
+          <div class="hint">60 meses = 5 años. Usado para calcular depreciación mensual.</div>
+        </div>
+        <div class="fld"><label>Valor residual ($)</label>
+          <input type="number" id="inv-resid" placeholder="0">
+          <div class="hint">Valor estimado al final de la vida útil.</div>
+        </div>
+        <div class="fld"><label>Depreciación mensual (auto)</label>
+          <input type="text" id="inv-deprec-preview" readonly placeholder="Se calcula automáticamente">
+          <div class="hint">= (Monto - Valor residual) / Vida útil</div>
+        </div>
       </div>
-      <div class="fld"><label>Categoría</label><input type="text" id="inv-cat" placeholder="Pantalla LED"></div>
-      <div class="fld"><label>Proveedor</label><input type="text" id="inv-prov"></div>
-      <div class="fld"><label>Monto inversión ($)</label><input type="number" id="inv-monto" placeholder="0"></div>
-      <div class="fld"><label>IVA a favor ($)</label><input type="number" id="inv-iva" placeholder="0"></div>
-      <div class="fld"><label>Vida útil (meses)</label><input type="number" id="inv-vida" placeholder="60"></div>
-      <div class="fld"><label>Valor residual ($)</label><input type="number" id="inv-resid" placeholder="0"></div>
+      <div class="fa">
+        <button class="btn-s" onclick="resetInv()">Limpiar</button>
+        <button class="btn-p" onclick="guardarInv()">Registrar inversión</button>
+      </div>
     </div>
-    <div class="fa"><button class="btn-p" onclick="guardarInv()">Registrar inversión</button></div>
-    <div class="divider"></div>
+  </div>
+
+  <div id="inv-lista" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <span id="inv-cnt" style="font-size:12.5px;color:var(--text2)"></span>
+      <button class="btn-p" onclick="syncInversiones()">↻ Sincronizar</button>
+    </div>
+    <div class="sr sr3" id="inv-kpis"></div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>ID</th><th>Fecha</th><th>Soporte</th><th>Categoría</th><th>Monto</th><th>IVA favor</th><th>Deprec./mes</th></tr></thead>
+        <thead><tr><th>ID</th><th>Fecha</th><th>Soporte</th><th>Categoría</th><th>Descripción</th><th>Proveedor</th><th>Monto</th><th>IVA a favor</th><th>Deprec./mes</th><th>Estado</th></tr></thead>
         <tbody id="inv-tbody"></tbody>
       </table>
     </div>
@@ -553,7 +595,7 @@ tr:hover td { background: var(--bg2); }
     <div id="iva-chart"></div>
     <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--text3)">
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--red);margin-right:4px"></span>Débito fiscal (IVA ventas)</span>
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green);margin-right:4px"></span>Crédito fiscal (IVA compras)</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green);margin-right:4px"></span>Crédito fiscal (IVA compras + inversiones)</span>
     </div>
   </div>
   <div id="iva-ventas" style="display:none">
@@ -566,7 +608,7 @@ tr:hover td { background: var(--bg2); }
   <div id="iva-compras" style="display:none">
     <div class="section-title">IVA en gastos / inversiones — crédito fiscal</div>
     <div class="tbl-wrap">
-      <table><thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Neto</th><th>IVA crédito</th><th>Total</th></tr></thead>
+      <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Descripción</th><th>Neto</th><th>IVA crédito</th><th>Total</th></tr></thead>
       <tbody id="iva-comp-body"></tbody></table>
     </div>
   </div>
@@ -625,11 +667,7 @@ function saveUrl() {
 
 async function api(action, payload={}) {
   if (!SHEET_URL) throw new Error('Sin URL configurada');
-  // Apps Script solo acepta GET con parámetros para evitar CORS
-  const params = new URLSearchParams({
-    action,
-    payload: JSON.stringify(payload)
-  });
+  const params = new URLSearchParams({ action, payload: JSON.stringify(payload) });
   const url = SHEET_URL + '?' + params.toString();
   const res = await fetch(url, { redirect: 'follow' });
   const text = await res.text();
@@ -653,7 +691,7 @@ async function testConexion() {
   }
 }
 
-// ── DATA (local + Sheets) ─────────────────────────────────
+// ── DATA ─────────────────────────────────────────────────
 const SOPS = [
   {id:'T1-P1',loc:'Galería Margalef',cap:2592},
   {id:'T2-P1',loc:'La Continental',cap:2880},{id:'T2-P2',loc:'La Continental',cap:2880},
@@ -668,9 +706,9 @@ const SOPS = [
 function loadLocal(key, def) { try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; } }
 function saveLocal(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
-let CAMPS = loadLocal(LS_CAMP, []);
-let COBROS = loadLocal(LS_COB, []);
-let GASTOS = loadLocal(LS_GAS, []);
+let CAMPS      = loadLocal(LS_CAMP, []);
+let COBROS     = loadLocal(LS_COB, []);
+let GASTOS     = loadLocal(LS_GAS, []);
 let INVERSIONES = loadLocal(LS_INV, []);
 
 // ── HELPERS ───────────────────────────────────────────────
@@ -682,17 +720,9 @@ const mesLabel = (y,m) => new Date(y,m,1).toLocaleDateString('es-AR',{month:'sho
 const overlap = (ai,af,bi,bf) => new Date(ai)<=new Date(bf)&&new Date(af)>=new Date(bi);
 const dias = (a,b) => Math.max(1,Math.round((new Date(b)-new Date(a))/86400000)+1);
 const ivaCalc = (monto,al) => !al?0:Math.round(monto*(al/100)/(1+al/100));
-const netoCalc = (monto,al) => !al?monto:Math.round(monto/(1+al/100));
 
-function showMsg(id, ok=true) {
-  $(id).style.display='block';
-  setTimeout(()=>$(id).style.display='none', 3500);
-}
-function showErr(id, msg) {
-  $(id).textContent = '✗ ' + msg;
-  $(id).style.display='block';
-  setTimeout(()=>$(id).style.display='none', 5000);
-}
+function showMsg(id) { $(id).style.display='block'; setTimeout(()=>$(id).style.display='none',3500); }
+function showErr(id,msg) { $(id).textContent='✗ '+msg; $(id).style.display='block'; setTimeout(()=>$(id).style.display='none',5000); }
 
 // ── NAV ───────────────────────────────────────────────────
 function go(page, el) {
@@ -703,7 +733,8 @@ function go(page, el) {
   if(page==='dash') renderDash();
   if(page==='campanas') { renderCamp(); syncCampanas(); }
   if(page==='cobranzas') renderCob();
-  if(page==='costos') { renderGastos(); renderInv(); }
+  if(page==='costos') renderGastos();
+  if(page==='inversiones') { renderInvLista(); }
   if(page==='iva') renderIva();
   if(page==='proy') renderProy();
 }
@@ -712,10 +743,12 @@ function go(page, el) {
 function pasesOcup(sopId, desde, hasta) {
   let tot=0;
   CAMPS.forEach(c=>{
-    if(!(c.soportes||[]).includes(sopId)) return;
-    const d0=desde||c.ini||c.Fecha_Inicio, d1=hasta||c.fin||c.Fecha_Fin;
+    const soportes=c.soportes||[];
+    if(!soportes.includes(sopId)) return;
     const ci=c.ini||c.Fecha_Inicio, cf=c.fin||c.Fecha_Fin;
-    if(ci&&cf&&overlap(ci,cf,d0,d1)) tot+=(Number(c.pases)||Number(c.Pases_Por_Dia)||0);
+    if(!ci||!cf) return;
+    const d0=desde||ci, d1=hasta||cf;
+    if(overlap(ci,cf,d0,d1)) tot+=(Number(c.pases)||Number(c.Pases_Por_Dia)||0);
   });
   return tot;
 }
@@ -724,7 +757,7 @@ function barCol(p){return p>=90?'var(--red)':p>=25?'var(--orange)':'var(--green)
 
 function renderDash(){
   const desde=$('d-desde').value, hasta=$('d-hasta').value, filtE=$('d-est').value;
-  const cobrado=COBROS.filter(c=>new Date(c.fecha)<=hoy).reduce((a,c)=>a+(Number(c.monto)||0),0);
+  const cobrado=COBROS.filter(c=>new Date(c.fecha+'T00:00:00')<=hoy).reduce((a,c)=>a+(Number(c.monto)||0),0);
   const totalFact=CAMPS.reduce((a,c)=>a+(Number(c.total)||Number(c.Total_Facturado)||0),0);
   let totP=0,libres=0;
   SOPS.forEach(s=>{const p=Math.min(100,Math.round((pasesOcup(s.id,desde,hasta)/s.cap)*100));totP+=p;if(estOcup(p)==='libre')libres++;});
@@ -758,15 +791,27 @@ async function syncCampanas() {
   if (!SHEET_URL) return;
   $('camp-loading').style.display='block';
   try {
-    const res = await api('getCampanas');
-    CAMPS = res.data.map(c=>({
-      ...c,
-      id: c.ID_Orden, orden: c.Orden, cliente: c.Cliente,
-      ini: c.Fecha_Inicio, fin: c.Fecha_Fin,
-      pases: c.Pases_Por_Dia, total: c.Total_Facturado,
-      factura: c.Nro_Factura, cobro: c.Estado_Cobro, estado: c.Estado_Campana,
-      soportes: c.soportes || []
+    const res = await api('getVentas');
+    // res.filas contiene cada fila; res.data contiene órdenes agrupadas
+    CAMPS = (res.filas||[]).map(row=>({
+      orden: row['N° Orden de Publicidad'],
+      cliente: row['Cliente'],
+      soportes: row['ID Soporte'] ? [row['ID Soporte']] : [],
+      ini: row['Fecha Inicio'],
+      fin: row['Fecha Fin'],
+      pases: Number(row['Pases'])||0,
+      total: Number(row['Total Facturado'])||0,
+      factura: row['N° de Factura'],
+      cobro: row['Estado Facturación']||row['Estado'],
+      estado: row['Estado'],
     }));
+    // Agrupar soportes por orden
+    const byOrden = {};
+    CAMPS.forEach(c=>{
+      if(!byOrden[c.orden]) byOrden[c.orden] = {...c};
+      else { byOrden[c.orden].soportes.push(...c.soportes); }
+    });
+    CAMPS = Object.values(byOrden);
     saveLocal(LS_CAMP, CAMPS);
     renderCamp(); renderDash();
   } catch(e) { showErr('camp-err', e.message); }
@@ -776,21 +821,21 @@ async function syncCampanas() {
 function renderCamp(){
   const filtE=$('fc-est').value;
   let lista=CAMPS.slice().reverse();
-  if(filtE) lista=lista.filter(c=>(c.estado||c.Estado_Campana)===filtE);
+  if(filtE) lista=lista.filter(c=>(c.estado||'')===filtE);
   $('camp-cnt').textContent=lista.length+' orden'+(lista.length!==1?'es':'');
   $('camp-body').innerHTML=lista.map(c=>{
-    const est=c.estado||c.Estado_Campana||'';
-    const cob=c.cobro||c.Estado_Cobro||'';
+    const est=c.estado||'';
+    const cob=c.cobro||'';
     const sops=(c.soportes||[]).join(', ')||'—';
     return `<tr>
-      <td class="mono" style="font-size:11px;color:var(--text2)">${c.orden||c.Orden||'—'}</td>
-      <td style="font-weight:500">${c.cliente||c.Cliente||'—'}</td>
+      <td class="mono" style="font-size:11px;color:var(--text2)">${c.orden||'—'}</td>
+      <td style="font-weight:500">${c.cliente||'—'}</td>
       <td style="font-size:11px;color:var(--text2)">${sops}</td>
-      <td style="font-size:11px;white-space:nowrap">${fmtD(c.ini||c.Fecha_Inicio)}<br>${fmtD(c.fin||c.Fecha_Fin)}</td>
-      <td class="mono" style="font-weight:500">$${fmt(c.total||c.Total_Facturado)}</td>
-      <td style="font-size:11px;color:var(--text2)">${c.factura||c.Nro_Factura||'—'}</td>
-      <td><span class="bdg b-${cob==='Cobrado'?'ok':cob==='Pendiente'?'w':'blue'}">${cob}</span></td>
-      <td><span class="bdg b-${est==='Activa'?'ok':est==='Pendiente'?'w':'neu'}">${est}</span></td>
+      <td style="font-size:11px;white-space:nowrap">${fmtD(c.ini)}<br>${fmtD(c.fin)}</td>
+      <td class="mono" style="font-weight:500">$${fmt(c.total)}</td>
+      <td style="font-size:11px;color:var(--text2)">${c.factura||'—'}</td>
+      <td><span class="bdg b-${cob==='Cobrado'?'ok':cob==='Pendiente'?'w':'blue'}">${cob||'—'}</span></td>
+      <td><span class="bdg b-${est==='Activa'?'ok':est==='Pendiente'?'w':'neu'}">${est||'—'}</span></td>
     </tr>`;
   }).join('');
 }
@@ -834,26 +879,17 @@ async function guardarVenta(){
   const pases=parseInt($('nv-pases').value)||0;
   if(!cli||!selSops.length||!ini||!fin||!pases){alert('Completá cliente, soportes, fechas y pases.');return;}
   const payload={
-    orden:$('nv-orden').value.trim(), cliente:cli, soportes:selSops,
-    fechaInicio:ini, fechaFin:fin, pasesPorDia:pases,
+    orden:$('nv-orden').value.trim()||'OP-'+(Date.now()+'').slice(-5),
+    cliente:cli, soportes:selSops, fechaInicio:ini, fechaFin:fin, pases,
     totalFacturado:parseFloat($('nv-total').value)||0,
     nroFactura:$('nv-fac').value.trim(),
-    estadoCobro:$('nv-cobro').value, formaPago:$('nv-pago').value,
-    estadoCampana:$('nv-est').value, observaciones:$('nv-obs').value
   };
   $('nv-loading').style.display='block';
   try {
-    if (SHEET_URL) {
-      const res=await api('saveCampana',payload);
-      payload.id=res.id; payload.orden=res.orden;
-    } else {
-      payload.id='OP-'+(CAMPS.length+1).toString().padStart(3,'0');
-      payload.orden=payload.orden||payload.id;
-    }
-    CAMPS.push({...payload,ini,fin,total:payload.totalFacturado,factura:payload.nroFactura,cobro:payload.estadoCobro,estado:payload.estadoCampana});
-    saveLocal(LS_CAMP,CAMPS);
-    showMsg('nv-suc');
-    resetNV(); renderDash(); renderCob(); renderProy();
+    if (SHEET_URL) await api('saveVenta', payload);
+    CAMPS.push({...payload, ini, fin, total:payload.totalFacturado, factura:payload.nroFactura, cobro:'Pendiente', estado:'Activa'});
+    saveLocal(LS_CAMP, CAMPS);
+    showMsg('nv-suc'); resetNV(); renderDash(); renderCob(); renderProy();
   } catch(e){ showErr('nv-err',e.message); }
   finally { $('nv-loading').style.display='none'; }
 }
@@ -884,7 +920,7 @@ function renderCob(){
     const pend=Math.max(0,tot-cobReal);
     const pct=tot>0?Math.round((cobReal/tot)*100):0;
     if(cobTab==='cobradas'&&pend>0) return;
-    if(cobTab==='pendientes'&&cobReal>=tot) return;
+    if(cobTab==='pendientes'&&cobReal>=tot&&tot>0) return;
     if(cobTab==='futuros'&&cobFutCli===0) return;
     html+=`<div class="cob-card">
       <div class="cob-hdr">
@@ -909,7 +945,7 @@ function renderCob(){
             <div style="display:flex;align-items:center;gap:10px">
               <span class="mono" style="font-weight:500">$${fmt(c.monto)}</span>
               <span style="font-size:10.5px;color:${fut?'var(--accent)':'var(--text3)'}">${fmtD(c.fecha)}${fut?' ↗':''}</span>
-              <span class="bdg b-${!fut?'ok':fut?'blue':'w'}">${!fut?'Cobrado':'Programado'}</span>
+              <span class="bdg b-${!fut?'ok':'blue'}">${!fut?'Cobrado':'Programado'}</span>
             </div>
           </div>`;
         }).join('')}
@@ -942,15 +978,30 @@ async function guardarCobro(){
   const cobro={id,cliente:cli,orden:$('nc-orden').value,fecha,monto,
     ivaAlicuota:parseFloat($('nc-iva').value)||0,
     factura:$('nc-fac').value,pago:$('nc-pago').value,obs:$('nc-obs').value};
-  COBROS.push(cobro);
-  saveLocal(LS_COB,COBROS);
-  showMsg('nc-suc');
-  resetNC(); renderDash(); renderCob(); renderIva(); renderProy();
+  $('nc-loading').style.display='block';
+  try {
+    if (SHEET_URL) {
+      await api('saveCobro', {
+        orden: cobro.orden.split(' — ')[0],
+        cliente: cobro.cliente,
+        fecha: cobro.fecha,
+        fechaCobroProyectada: cobro.fecha,
+        montoNeto: monto - ivaCalc(monto, cobro.ivaAlicuota),
+        iva: ivaCalc(monto, cobro.ivaAlicuota),
+        metodoPago: cobro.pago,
+        fechaPagoReal: cobro.fecha <= hoyStr ? cobro.fecha : '',
+      });
+    }
+    COBROS.push(cobro);
+    saveLocal(LS_COB, COBROS);
+    showMsg('nc-suc'); resetNC(); renderDash(); renderCob(); renderIva(); renderProy();
+  } catch(e){ showErr('nc-err', e.message); }
+  finally { $('nc-loading').style.display='none'; }
 }
 function resetNC(){['nc-fecha','nc-monto','nc-fac','nc-obs','nc-iva-calc'].forEach(i=>$(i).value='');$('nc-cli').value='';}
 function irACobro(cli){
   go('nueva-cob',document.querySelectorAll('.tab')[4]);
-  setTimeout(()=>{$('nc-cli').value=cli;fillOrden();},100);
+  setTimeout(()=>{buildCliCobro();$('nc-cli').value=cli;fillOrden();},100);
 }
 
 // ── COSTOS ────────────────────────────────────────────────
@@ -961,9 +1012,7 @@ function setCosTab(t,el){
   el.classList.add('active');
   $('cos-gasto').style.display=t==='gasto'?'block':'none';
   $('cos-lista').style.display=t==='lista'?'block':'none';
-  $('cos-inv').style.display=t==='inv'?'block':'none';
   if(t==='lista') renderGastos();
-  if(t==='inv') renderInv();
 }
 function calcIvaGasto(){
   const m=parseFloat($('cg-monto').value)||0;
@@ -978,11 +1027,17 @@ async function guardarGasto(){
   const g={id,fecha,fechaPago:$('cg-fecha-pago').value||fecha,cat:$('cg-cat').value,
     sop:$('cg-sop').value,desc:$('cg-desc').value,neto,ivaAlicuota:al,
     est:$('cg-est').value,pago:$('cg-pago').value};
-  GASTOS.push(g);
-  saveLocal(LS_GAS,GASTOS);
-  showMsg('cg-suc');
-  ['cg-fecha','cg-fecha-pago','cg-monto','cg-desc','cg-iva-calc'].forEach(i=>$(i).value='');
-  renderProy(); renderIva();
+  try {
+    if (SHEET_URL) await api('saveCosto', {
+      fecha:g.fecha, fechaPago:g.fechaPago, soporte:g.sop, categoria:g.cat,
+      descripcion:g.desc, monto:g.neto, formaPago:g.pago
+    });
+    GASTOS.push(g);
+    saveLocal(LS_GAS, GASTOS);
+    showMsg('cg-suc');
+    ['cg-fecha','cg-fecha-pago','cg-monto','cg-desc','cg-iva-calc'].forEach(i=>$(i).value='');
+    renderProy(); renderIva();
+  } catch(e){ alert('Error: '+e.message); }
 }
 async function syncGastos(){
   if(!SHEET_URL) return;
@@ -1028,24 +1083,103 @@ function renderGastos(){
     </tr>`;
   }).join('');
 }
+
+// ── INVERSIONES ───────────────────────────────────────────
+let invTab='nueva';
+function setInvTab(t,el){
+  invTab=t;
+  document.querySelectorAll('#page-inversiones .sub-tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  $('inv-nueva').style.display=t==='nueva'?'block':'none';
+  $('inv-lista').style.display=t==='lista'?'block':'none';
+  if(t==='lista') renderInvLista();
+}
+
+// Preview depreciación en tiempo real
+['inv-monto','inv-vida','inv-resid'].forEach(id=>{
+  document.addEventListener('DOMContentLoaded',()=>{});
+  setTimeout(()=>{
+    const el=$(id);
+    if(el) el.addEventListener('input', calcDeprecPreview);
+  },100);
+});
+function calcDeprecPreview(){
+  const monto=parseFloat($('inv-monto').value)||0;
+  const vida=parseInt($('inv-vida').value)||60;
+  const resid=parseFloat($('inv-resid').value)||0;
+  const dep=vida>0?Math.round((monto-resid)/vida):0;
+  $('inv-deprec-preview').value=dep>0?'$'+fmt(dep)+'/mes':'';
+}
+
 async function guardarInv(){
   const fecha=$('inv-fecha').value, monto=parseFloat($('inv-monto').value)||0;
   if(!fecha||!monto){alert('Ingresá fecha y monto.');return;}
   const vida=parseInt($('inv-vida').value)||60, resid=parseFloat($('inv-resid').value)||0;
+  const dep=vida>0?Math.round((monto-resid)/vida):0;
   const id='I-'+(INVERSIONES.length+1).toString().padStart(2,'0');
   const inv={id,fecha,sop:$('inv-sop').value,cat:$('inv-cat').value,
-    prov:$('inv-prov').value,monto,iva:parseFloat($('inv-iva').value)||0,vida,resid};
-  INVERSIONES.push(inv);
-  saveLocal(LS_INV,INVERSIONES);
-  showMsg('inv-suc');
-  renderInv();
+    desc:$('inv-desc').value,prov:$('inv-prov').value,
+    monto,iva:parseFloat($('inv-iva').value)||0,vida,resid,dep};
+  $('inv-loading').style.display='block';
+  try {
+    if (SHEET_URL) {
+      await api('saveInversion',{
+        fecha:inv.fecha, soporte:inv.sop, categoria:inv.cat,
+        descripcion:inv.desc, proveedor:inv.prov, monto:inv.monto,
+        iva:inv.iva, vidaUtil:inv.vida, valorResidual:inv.resid
+      });
+    }
+    INVERSIONES.push(inv);
+    saveLocal(LS_INV, INVERSIONES);
+    showMsg('inv-suc'); resetInv(); renderInvLista(); renderIva(); renderProy();
+  } catch(e){ showErr('inv-err',e.message); }
+  finally { $('inv-loading').style.display='none'; }
 }
-function renderInv(){
+function resetInv(){
+  ['inv-fecha','inv-cat','inv-prov','inv-desc','inv-monto','inv-iva','inv-vida','inv-resid','inv-deprec-preview'].forEach(i=>{if($(i))$(i).value='';});
+}
+async function syncInversiones(){
+  if(!SHEET_URL) return;
+  try {
+    const res=await api('getInversiones');
+    INVERSIONES=res.data.map(i=>({
+      id:i['ID Inversión'],fecha:i['Fecha Adquisición'],
+      sop:i['ID Soporte'],cat:i['Categoría'],desc:i['Descripción'],
+      prov:i['Proveedor'],monto:Number(i['Monto Inversión'])||0,
+      iva:Number(i['IVA A FAVOR'])||0,
+      vida:Number(i['Vida Útil (meses)'])||60,
+      resid:Number(i['Valor Residual'])||0,
+      dep:Number(i['Depreciación Mensual'])||0,
+      estado:i['Estado']
+    }));
+    saveLocal(LS_INV,INVERSIONES);
+    renderInvLista(); renderIva(); renderProy();
+  } catch(e){alert('Error al sincronizar: '+e.message);}
+}
+function renderInvLista(){
+  const totalMonto=INVERSIONES.reduce((a,i)=>a+(Number(i.monto)||0),0);
+  const totalIvaFavor=INVERSIONES.reduce((a,i)=>a+(Number(i.iva)||0),0);
+  const totalDepM=INVERSIONES.reduce((a,i)=>a+(Number(i.dep)||(i.vida>0?Math.round((i.monto-i.resid)/i.vida):0)),0);
+  $('inv-cnt').textContent=INVERSIONES.length+' inversión'+(INVERSIONES.length!==1?'es':'');
+  $('inv-kpis').innerHTML=`
+    <div class="sc"><div class="sl">Capital invertido</div><div class="sv">$${fmt(totalMonto)}</div><div class="ss">${INVERSIONES.length} activos</div></div>
+    <div class="sc"><div class="sl">IVA a favor total</div><div class="sv" style="color:var(--green)">$${fmt(totalIvaFavor)}</div></div>
+    <div class="sc"><div class="sl">Depreciación mensual</div><div class="sv" style="color:var(--orange)">$${fmt(totalDepM)}/mes</div><div class="ss">impacto en costos</div></div>
+  `;
   $('inv-tbody').innerHTML=INVERSIONES.map(i=>{
-    const dep=i.vida>0?Math.round((i.monto-i.resid)/i.vida):0;
-    return `<tr><td class="mono">${i.id}</td><td>${fmtD(i.fecha)}</td><td>${i.sop}</td><td>${i.cat||'—'}</td>
-      <td class="mono">$${fmt(i.monto)}</td><td class="mono" style="color:var(--green)">$${fmt(i.iva)}</td>
-      <td class="mono">$${fmt(dep)}/mes</td></tr>`;
+    const dep=Number(i.dep)||(i.vida>0?Math.round((i.monto-i.resid)/i.vida):0);
+    return `<tr>
+      <td class="mono" style="font-size:11px;color:var(--text3)">${i.id}</td>
+      <td>${fmtD(i.fecha)}</td>
+      <td><span class="bdg b-blue">${i.sop}</span></td>
+      <td>${i.cat||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${i.desc||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${i.prov||'—'}</td>
+      <td class="mono" style="font-weight:600">$${fmt(i.monto)}</td>
+      <td class="mono" style="color:var(--green)">$${fmt(i.iva)}</td>
+      <td class="mono" style="color:var(--orange)">$${fmt(dep)}/mes</td>
+      <td><span class="bdg b-${(i.estado||'Activo')==='Activo'?'ok':'neu'}">${i.estado||'Activo'}</span></td>
+    </tr>`;
   }).join('');
 }
 
@@ -1066,7 +1200,7 @@ function renderIva(){
   const ivaFut=COBROS.filter(c=>c.fecha>hoyStr).reduce((a,c)=>a+ivaCalc(Number(c.monto)||0,Number(c.ivaAlicuota)||0),0);
   $('iva-kpis').innerHTML=`
     <div class="sc"><div class="sl">IVA débito fiscal</div><div class="sv" style="color:var(--red)">$${fmt(debito)}</div><div class="ss">IVA de tus ventas cobradas</div></div>
-    <div class="sc"><div class="sl">IVA crédito fiscal</div><div class="sv" style="color:var(--green)">$${fmt(credito)}</div><div class="ss">IVA de tus gastos</div></div>
+    <div class="sc"><div class="sl">IVA crédito fiscal</div><div class="sv" style="color:var(--green)">$${fmt(credito)}</div><div class="ss">Gastos + Inversiones</div></div>
     <div class="sc"><div class="sl">Saldo IVA</div><div class="sv" style="color:${saldo>0?'var(--orange)':'var(--green)'}">$${fmt(Math.abs(saldo))}</div><div class="ss">${saldo>0?'a pagar al fisco':'a tu favor'}</div></div>
     <div class="sc"><div class="sl">IVA futuro</div><div class="sv" style="color:var(--accent)">$${fmt(ivaFut)}</div><div class="ss">de cobros programados</div></div>
   `;
@@ -1077,9 +1211,16 @@ function renderIva(){
     meses[k].deb+=ivaCalc(Number(c.monto)||0,Number(c.ivaAlicuota)||0);
   });
   GASTOS.forEach(g=>{
-    const k=g.fecha.slice(0,7);
+    const k=(g.fecha||'').slice(0,7);
+    if(!k) return;
     if(!meses[k]) meses[k]={mes:k,deb:0,cred:0};
     meses[k].cred+=g.neto*(g.ivaAlicuota/100);
+  });
+  INVERSIONES.forEach(i=>{
+    const k=(i.fecha||'').slice(0,7);
+    if(!k) return;
+    if(!meses[k]) meses[k]={mes:k,deb:0,cred:0};
+    meses[k].cred+=Number(i.iva)||0;
   });
   const arr=Object.values(meses).sort((a,b)=>a.mes.localeCompare(b.mes));
   const maxV=Math.max(...arr.map(m=>Math.max(m.deb,m.cred)),1);
@@ -1111,14 +1252,23 @@ function renderIva(){
       <td class="mono">$${fmt(c.monto)}</td>
     </tr>`;
   }).join('');
-  $('iva-comp-body').innerHTML=GASTOS.filter(g=>g.ivaAlicuota>0).map(g=>{
-    const iva=g.neto*(g.ivaAlicuota/100);
-    return `<tr><td>${fmtD(g.fecha)}</td><td>${g.cat||'—'}</td><td>${g.desc||'—'}</td>
-      <td class="mono">$${fmt(g.neto)}</td>
-      <td class="mono" style="color:var(--green)">$${fmt(iva)}</td>
-      <td class="mono">$${fmt(g.neto+iva)}</td>
-    </tr>`;
-  }).join('');
+  // Crédito fiscal: gastos + inversiones
+  const comprasRows = [
+    ...GASTOS.filter(g=>g.ivaAlicuota>0).map(g=>{
+      const iva=g.neto*(g.ivaAlicuota/100);
+      return `<tr><td>${fmtD(g.fecha)}</td><td><span class="bdg b-neu">Gasto</span></td><td>${g.cat||'—'}</td><td>${g.desc||'—'}</td>
+        <td class="mono">$${fmt(g.neto)}</td>
+        <td class="mono" style="color:var(--green)">$${fmt(iva)}</td>
+        <td class="mono">$${fmt(g.neto+iva)}</td></tr>`;
+    }),
+    ...INVERSIONES.filter(i=>Number(i.iva)>0).map(i=>{
+      return `<tr><td>${fmtD(i.fecha)}</td><td><span class="bdg b-blue">Inversión</span></td><td>${i.cat||'—'}</td><td>${i.desc||'—'}</td>
+        <td class="mono">$${fmt(i.monto)}</td>
+        <td class="mono" style="color:var(--green)">$${fmt(i.iva)}</td>
+        <td class="mono">$${fmt(Number(i.monto)+Number(i.iva))}</td></tr>`;
+    })
+  ];
+  $('iva-comp-body').innerHTML=comprasRows.join('');
 }
 
 // ── PROYECCIONES ──────────────────────────────────────────
@@ -1129,7 +1279,10 @@ function renderProy(){
     const d=new Date(hoy.getFullYear(),hoy.getMonth()+i,1);
     meses.push({y:d.getFullYear(),m:d.getMonth(),label:mesLabel(d.getFullYear(),d.getMonth())});
   }
-  const depM=INVERSIONES.reduce((a,i)=>a+(i.vida>0?(i.monto-i.resid)/i.vida:0),0);
+  const depM=INVERSIONES.reduce((a,i)=>{
+    const d=Number(i.dep)||(i.vida>0?Math.round((i.monto-i.resid)/i.vida):0);
+    return a+d;
+  },0);
   const data=meses.map(mes=>{
     const ini=new Date(mes.y,mes.m,1).toISOString().slice(0,10);
     const fin=new Date(mes.y,mes.m+1,0).toISOString().slice(0,10);
@@ -1194,6 +1347,12 @@ function renderProy(){
 }
 
 // ── INIT ──────────────────────────────────────────────────
+// Attach depreciation preview listeners after DOM is ready
+document.querySelectorAll ? ['inv-monto','inv-vida','inv-resid'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input', calcDeprecPreview);
+}) : null;
+
 buildChips();
 buildCliCobro();
 renderDash();
