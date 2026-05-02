@@ -679,14 +679,33 @@ async function testConn() {
   }
 }
 
-async function api(action, payload={}) {
-  if (!URL_GS) throw new Error('URL no configurada');
-  const p = new URLSearchParams({ action, payload: JSON.stringify(payload) });
-  const r = await fetch(URL_GS + '?' + p, { redirect: 'follow' });
-  const txt = await r.text();
-  let d; try { d = JSON.parse(txt); } catch { throw new Error('Respuesta inválida'); }
-  if (!d.ok) throw new Error(d.error || 'Error desconocido');
-  return d;
+// JSONP — único método que funciona con Apps Script desde GitHub Pages sin CORS errors
+function api(action, payload={}) {
+  return new Promise((resolve, reject) => {
+    if (!URL_GS) { reject(new Error('URL no configurada')); return; }
+    const cbName = '_cb_' + Math.random().toString(36).slice(2);
+    const timer  = setTimeout(() => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      reject(new Error('Timeout — verificá la URL del script'));
+    }, 15000);
+    window[cbName] = (data) => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      if (data && data.ok) resolve(data);
+      else reject(new Error((data && data.error) || 'Error desconocido'));
+    };
+    const p = new URLSearchParams({ action, payload: JSON.stringify(payload), callback: cbName });
+    const script = document.createElement('script');
+    script.src = URL_GS + '?' + p.toString();
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      reject(new Error('No se pudo conectar con el script'));
+    };
+    document.head.appendChild(script);
+  });
 }
 
 // ── SOPORTES ──────────────────────────────────────────────
