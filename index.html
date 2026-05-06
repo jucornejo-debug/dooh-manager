@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DOOH Manager</title>
+<title>Dominio Visual — Sistema de Gestión</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0c0e14;--bg2:#13161f;--bg3:#1a1e2e;--bg4:#222740;--border:#252a3d;--border2:#2f3550;--text:#dde1f0;--text2:#7a83a6;--text3:#454e6e;--blue:#4d7cfe;--blue-bg:#0d1a3a;--blue-dim:#1a2d5a;--green:#29d98a;--green-bg:#0a2318;--orange:#f5a623;--orange-bg:#2b1c07;--red:#f0545a;--red-bg:#280c0d;--r:8px;--r2:5px}
+:root{--bg:#0c0e14;--bg2:#13161f;--bg3:#1a1e2e;--bg4:#222740;--border:#252a3d;--border2:#2f3550;--text:#dde1f0;--text2:#7a83a6;--text3:#454e6e;--blue:#9B2020;--blue-bg:#1f0808;--blue-dim:#3a1010;--green:#29d98a;--green-bg:#0a2318;--orange:#f5a623;--orange-bg:#2b1c07;--red:#f0545a;--red-bg:#280c0d;--r:8px;--r2:5px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
 .topbar{display:flex;align-items:center;height:48px;padding:0 20px;background:var(--bg2);border-bottom:1px solid var(--border);gap:4px;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:200}
 .topbar::-webkit-scrollbar{display:none}
-.logo{font-size:12px;font-weight:600;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-right:20px;white-space:nowrap;flex-shrink:0}
+.logo{font-size:11px;font-weight:600;color:var(--text);letter-spacing:.08em;text-transform:uppercase;margin-right:16px;white-space:nowrap;flex-shrink:0;display:flex;align-items:center}
 .nav-btn{padding:6px 13px;font-size:12px;color:var(--text2);background:none;border:none;border-radius:var(--r2);cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .12s;border-bottom:2px solid transparent}
 .nav-btn:hover{color:var(--text);background:var(--bg3)}
 .nav-btn.active{color:var(--text);background:var(--bg3);border-bottom-color:var(--blue);font-weight:500}
@@ -103,7 +103,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 </style>
 </head>
 <body>
- 
+
 <div class="cfg-strip" id="cfg">
   <span>⚡ Google Sheet URL:</span>
   <input type="url" id="cfg-url" placeholder="https://script.google.com/macros/s/…/exec" oninput="saveUrl()">
@@ -111,9 +111,15 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <span id="cfg-status"></span>
   <button class="btn btn-sec btn-sm" onclick="document.getElementById('cfg').style.display='none'" style="margin-left:auto">Ocultar</button>
 </div>
- 
+
 <div class="topbar">
-  <span class="logo">DOOH MGR</span>
+  <span class="logo" style="display:flex;align-items:center;gap:8px">
+  <svg width="28" height="20" viewBox="0 0 56 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0 L18 0 Q28 0 28 20 Q28 40 18 40 L0 40 Z M6 8 L6 32 L16 32 Q22 32 22 20 Q22 8 16 8 Z" fill="#9B2020"/>
+    <path d="M30 0 L38 0 L48 30 L58 0 L66 0 L52 40 L44 40 Z" fill="#888"/>
+  </svg>
+  <span>DOMINIO VISUAL</span>
+</span>
   <button class="nav-btn active" onclick="go('dash',this)">Dashboard</button>
   <button class="nav-btn" onclick="go('disponibilidad',this)">Disponibilidad</button>
   <button class="nav-btn" onclick="go('ventas',this)">Campañas</button>
@@ -124,7 +130,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <button class="nav-btn" onclick="go('iva',this)">IVA</button>
   <button class="nav-btn" onclick="document.getElementById('cfg').style.display='flex'" style="margin-left:auto;color:var(--text3)">⚙</button>
 </div>
- 
+
 <!-- DASHBOARD -->
 <div class="page on" id="page-dash">
   <div class="stats s4" id="ds-kpis"></div>
@@ -142,7 +148,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   </div>
   <div class="sop-grid" id="ds-grid"></div>
 </div>
- 
+
 <!-- DISPONIBILIDAD -->
 <div class="page" id="page-disponibilidad">
   <div class="form-box">
@@ -162,7 +168,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   </div>
   <div class="sop-grid" id="dsp-grid"></div>
 </div>
- 
+
 <!-- CAMPAÑAS -->
 <div class="page" id="page-ventas">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
@@ -182,7 +188,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     </table>
   </div>
 </div>
- 
+
 <!-- NUEVA VENTA -->
 <div class="page" id="page-nueva-venta">
   <div class="msg-ok" id="nv-ok">✓ Venta guardada en Google Sheets.</div>
@@ -213,7 +219,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     </div>
   </div>
 </div>
- 
+
 <!-- COBRANZAS -->
 <div class="page" id="page-cobranzas">
   <div class="stats s4" id="cob-kpis"></div>
@@ -260,7 +266,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <div class="sec-hdr" style="margin-top:20px">Estado por cliente</div>
   <div id="cob-list"></div>
 </div>
- 
+
 <!-- COSTOS -->
 <div class="page" id="page-costos">
   <div class="stabs">
@@ -335,7 +341,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     </div>
   </div>
 </div>
- 
+
 <!-- INVERSIONES -->
 <div class="page" id="page-inversiones">
   <div class="stabs">
@@ -360,8 +366,15 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         <div class="field"><label>Categoría</label><input type="text" id="iv-cat" placeholder="Pantalla LED, Estructura, etc."></div>
         <div class="field"><label>Proveedor</label><input type="text" id="iv-prov" placeholder="Nombre del proveedor"></div>
         <div class="field full"><label>Descripción</label><input type="text" id="iv-desc" placeholder="Detalle del activo adquirido"></div>
-        <div class="field"><label>Monto total ($)</label><input type="number" id="iv-monto" placeholder="0" oninput="calcDeprec()"></div>
-        <div class="field"><label>IVA a favor ($)</label><input type="number" id="iv-iva" placeholder="0"></div>
+        <div class="field"><label>Monto total ($)</label><input type="number" id="iv-monto" placeholder="0" oninput="calcIvaInv();calcDeprec()"></div>
+        <div class="field"><label>Alícuota IVA</label>
+          <select id="iv-iva-al" onchange="calcIvaInv()">
+            <option value="0">Sin IVA / Exento</option>
+            <option value="21" selected>21%</option>
+            <option value="10.5">10.5%</option>
+          </select>
+        </div>
+        <div class="field"><label>IVA a favor ($) — calculado</label><input type="text" id="iv-iva" readonly placeholder="0"></div>
         <div class="field"><label>Vida útil (meses)</label>
           <input type="number" id="iv-vida" placeholder="60" oninput="calcDeprec()">
           <div class="hint">60 meses = 5 años típico para equipos</div>
@@ -394,7 +407,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     </div>
   </div>
 </div>
- 
+
 <!-- IVA -->
 <div class="page" id="page-iva">
   <div class="stats s4" id="iva-kpis"></div>
@@ -423,15 +436,15 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     </table></div>
   </div>
 </div>
- 
+
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 const LS={url:'dooh_url',camps:'dooh_camps',cobros:'dooh_cobros',gastos:'dooh_gastos',inv:'dooh_inv'};
 let URL_GS=localStorage.getItem(LS.url)||'';
 if(URL_GS) _('cfg-url').value=URL_GS;
- 
+
 function saveUrl(){URL_GS=_('cfg-url').value.trim();localStorage.setItem(LS.url,URL_GS);}
- 
+
 async function testConn(){
   const st=_('cfg-status');
   st.textContent='⏳ probando...';st.style.color='var(--text2)';
@@ -442,7 +455,7 @@ async function testConn(){
     syncAll();
   }catch(e){st.textContent='✗ '+e.message;st.style.color='var(--red)';}
 }
- 
+
 async function api(action,payload={}){
   if(!URL_GS) throw new Error('URL no configurada — hacé clic en ⚙ arriba a la derecha');
   const p=new URLSearchParams({action,payload:JSON.stringify(payload)});
@@ -452,7 +465,7 @@ async function api(action,payload={}){
   if(!d.ok) throw new Error(d.error||'Error desconocido');
   return d;
 }
- 
+
 // ── DATA ──────────────────────────────────────────────────
 // SOPS: capacidad base (se actualiza desde Sheets al sincronizar)
 let SOPS=[
@@ -465,22 +478,37 @@ let SOPS=[
   {id:'T7-P1',loc:'Buenos Aires',cap:2880},{id:'T7-P2',loc:'Buenos Aires',cap:2880},
   {id:'T8-P1',loc:'UCASAL',cap:2880},{id:'T8-P2',loc:'UCASAL',cap:2880},
 ];
- 
+
 function load(k,d=[]){try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}}
 function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
- 
+
 let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load(LS.inv);
- 
+
 // ── UTILS ─────────────────────────────────────────────────
 const _=id=>document.getElementById(id);
 const fmt=n=>Math.round(n||0).toLocaleString('es-AR');
-const fmtD=s=>{if(!s)return'—';try{return new Date(s+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch{return s;}};
+// Convierte cualquier formato de fecha a string ISO yyyy-mm-dd
+function toISO(s){
+  if(!s||s==='—'||s==='') return '';
+  if(typeof s==='number') return ''; // ignorar seriales numéricos de Sheets
+  s=String(s).trim();
+  // ya es ISO
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  // dd/mm/yyyy o dd-mm-yyyy
+  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  // mm/dd/yyyy
+  const m2=s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})/);
+  if(m2){ const y=m2[3].length===2?'20'+m2[3]:m2[3]; return `${y}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`; }
+  return '';
+}
+const fmtD=s=>{const iso=toISO(s);if(!iso)return'—';try{return new Date(iso+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch{return iso;}};
 const hoy=new Date();const HOY=hoy.toISOString().slice(0,10);
 const olap=(a,b,c,d)=>new Date(a)<=new Date(d)&&new Date(b)>=new Date(c);
 const ivaC=(m,a)=>a?Math.round(m*a/100/(1+a/100)):0;
 function flash(id){_(id).style.display='block';setTimeout(()=>_(id).style.display='none',3500);}
 function flashErr(id,msg){_(id).textContent='✗ '+msg;_(id).style.display='block';setTimeout(()=>_(id).style.display='none',5000);}
- 
+
 // ── NAV ───────────────────────────────────────────────────
 function go(page,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -496,13 +524,13 @@ function go(page,el){
   if(page==='inversiones') renderInvLista();
   if(page==='iva') renderIva();
 }
- 
+
 async function syncAll(){
   await syncOcupacion(); // primero — actualiza capacidades
   await Promise.allSettled([syncVentas(),syncGastos(),syncInversiones()]);
   renderDash();renderIva();
 }
- 
+
 async function syncOcupacion(){
   if(!URL_GS) return;
   try{
@@ -514,7 +542,7 @@ async function syncOcupacion(){
     });
   }catch(e){console.warn('syncOcupacion:',e.message);}
 }
- 
+
 // ── OCUPACIÓN ─────────────────────────────────────────────
 // Calcula el promedio real de ocupación diaria en un período.
 // Para cada campaña que se superpone con el rango pedido,
@@ -525,10 +553,10 @@ async function syncOcupacion(){
 // Eso es lo que determina si podés vender o no.
 function ocupacionSoporte(sopId, desde, hasta) {
   const cap = (SOPS.find(s => s.id === sopId) || {}).cap || 2880;
- 
+
   // Campañas activas que afectan este soporte
   const campsSop = CAMPS.filter(c => (c.soportes || []).includes(sopId) && c.ini && c.fin);
- 
+
   if (!desde || !hasta) {
     // Sin filtro: pases vendidos HOY
     const hoyPases = campsSop
@@ -541,27 +569,27 @@ function ocupacionSoporte(sopId, desde, hasta) {
       label: 'hoy'
     };
   }
- 
+
   // Con rango: iterar cada día y encontrar el pico
   const dInicio = new Date(desde), dFin = new Date(hasta);
   const totalDias = Math.max(1, Math.round((dFin - dInicio) / 86400000) + 1);
   let picoPases = 0;
   let diasConflicto = 0;
- 
+
   for (let i = 0; i < totalDias; i++) {
     const dia = new Date(dInicio);
     dia.setDate(dia.getDate() + i);
     const diaStr = dia.toISOString().slice(0, 10);
- 
+
     // Suma pases de todas las campañas activas ese día específico
     const pasesDia = campsSop
       .filter(c => c.ini <= diaStr && c.fin >= diaStr)
       .reduce((a, c) => a + Number(c.pases || 0), 0);
- 
+
     if (pasesDia > picoPases) picoPases = pasesDia;
     if (pasesDia >= cap) diasConflicto++;
   }
- 
+
   return {
     pico: picoPases,                              // día más ocupado
     disponible: Math.max(0, cap - picoPases),     // lo que queda libre en el peor día
@@ -571,17 +599,17 @@ function ocupacionSoporte(sopId, desde, hasta) {
     label: `pico en ${totalDias} días`
   };
 }
- 
+
 // Wrapper simple para compatibilidad con código existente
 function pasesEnPeriodo(sopId, desde, hasta) {
   return ocupacionSoporte(sopId, desde, hasta).pico;
 }
- 
+
 const estOcup=p=>p>=90?'lleno':p>=25?'medio':'libre';
 const colOcup=p=>p>=90?'var(--red)':p>=25?'var(--orange)':'var(--green)';
 const lblOcup=p=>p>=90?'Sin disp.':p>=25?'Parcial':'Libre';
 const bdgOcup=p=>p>=90?'bdg-err':p>=25?'bdg-w':'bdg-ok';
- 
+
 function sopCardHTML(s, ocp, extra) {
   const p = Math.min(100, Math.round((ocp / s.cap) * 100));
   const disp = Math.max(0, s.cap - ocp);
@@ -599,13 +627,13 @@ function sopCardHTML(s, ocp, extra) {
     ${conflictoTxt}
   </div>`;
 }
- 
+
 // ── DASHBOARD ─────────────────────────────────────────────
 function renderDash(){
   const desde=_('dd-desde').value, hasta=_('dd-hasta').value, filtE=_('dd-est').value;
   const cobrado=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
   const totalFact=CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
- 
+
   let totP=0, libres=0, sinDisp=0;
   SOPS.forEach(s=>{
     const oc=ocupacionSoporte(s.id,desde,hasta);
@@ -613,14 +641,14 @@ function renderDash(){
     if(estOcup(oc.pct)==='libre') libres++;
     if(estOcup(oc.pct)==='lleno') sinDisp++;
   });
- 
+
   _('ds-kpis').innerHTML=`
     <div class="stat"><div class="stat-lbl">Ocupación pico${desde&&hasta?' — período':' — hoy'}</div><div class="stat-val">${Math.round(totP/SOPS.length)}%</div><div class="stat-sub">${desde&&hasta?fmtD(desde)+' → '+fmtD(hasta):'día actual'}</div></div>
     <div class="stat"><div class="stat-lbl">Soportes disponibles</div><div class="stat-val">${libres}</div><div class="stat-sub">de ${SOPS.length} caras totales</div></div>
     <div class="stat"><div class="stat-lbl">Cobrado</div><div class="stat-val" style="color:var(--green)">$${fmt(cobrado)}</div><div class="stat-sub">efectivizado</div></div>
     <div class="stat"><div class="stat-lbl">Por cobrar</div><div class="stat-val" style="color:var(--orange)">$${fmt(Math.max(0,totalFact-cobrado))}</div><div class="stat-sub">pendiente</div></div>
   `;
- 
+
   let lista=SOPS.map(s=>{
     const oc=ocupacionSoporte(s.id,desde,hasta);
     return{s, ocp:oc.pico, p:oc.pct, est:estOcup(oc.pct), extra:oc};
@@ -628,7 +656,7 @@ function renderDash(){
   if(filtE) lista=lista.filter(x=>x.est===filtE);
   _('ds-grid').innerHTML=lista.map(x=>sopCardHTML(x.s, x.ocp, x.extra)).join('');
 }
- 
+
 // ── DISPONIBILIDAD ────────────────────────────────────────
 function renderDispGrid(){
   _('dsp-grid').innerHTML=SOPS.map(s=>{
@@ -639,7 +667,7 @@ function renderDispGrid(){
 function checkDisp(){
   const ini=_('dsp-ini').value, fin=_('dsp-fin').value;
   const pases=parseInt(_('dsp-pases').value)||0, filtro=_('dsp-filt').value;
- 
+
   let lista=SOPS.map(s=>{
     const oc = ini&&fin ? ocupacionSoporte(s.id,ini,fin) : {pico:0,disponible:s.cap,pct:0,diasConflicto:0,totalDias:1};
     const ok = !pases || pases <= oc.disponible;
@@ -647,7 +675,7 @@ function checkDisp(){
   });
   if(filtro==='ok') lista=lista.filter(x=>x.ok);
   if(filtro==='no') lista=lista.filter(x=>!x.ok);
- 
+
   _('dsp-grid').innerHTML=lista.map(x=>{
     const s=x.s, oc=x.oc, ok=x.ok;
     const pAfter=Math.min(100,Math.round(((oc.pico+(ok&&pases?pases:0))/s.cap)*100));
@@ -668,7 +696,7 @@ function checkDisp(){
     </div>`;
   }).join('');
 }
- 
+
 // ── VENTAS ────────────────────────────────────────────────
 async function syncVentas(){
   if(!URL_GS) return;
@@ -679,7 +707,8 @@ async function syncVentas(){
     (r.filas||[]).forEach(row=>{
       const ord=row['N° Orden de Publicidad'];if(!ord) return;
       if(!byOrden[ord]) byOrden[ord]={
-        orden:ord,cliente:row['Cliente'],ini:row['Fecha Inicio'],fin:row['Fecha Fin'],
+        orden:ord,cliente:row['Cliente'],
+        ini:toISO(row['Fecha Inicio']),fin:toISO(row['Fecha Fin']),
         pases:Number(row['Pases'])||0,total:Number(row['Total Facturado'])||0,
         factura:row['N° de Factura'],cobro:row['Estado Facturación']||'',
         estado:row['Estado']||'',soportes:[]
@@ -707,7 +736,7 @@ function renderVentas(){
     <td><span class="bdg ${c.estado==='ACTIVO'?'bdg-ok':c.estado==='INACTIVO'?'bdg-neu':'bdg-w'}">${c.estado||'—'}</span></td>
   </tr>`).join('')||`<tr><td colspan="8" class="empty">Sin campañas. Hacé clic en ↻ Sincronizar.</td></tr>`;
 }
- 
+
 // ── NUEVA VENTA ───────────────────────────────────────────
 let selSops=[];
 function buildChips(){
@@ -747,13 +776,13 @@ async function guardarVenta(){
   _('nv-load').style.display='block';
   try{
     if(URL_GS) await api('saveVenta',payload);
-    CAMPS.push({...payload,ini,fin,total:payload.totalFacturado,factura:payload.nroFactura,cobro:_('nv-cobest').value,estado:'ACTIVO'});
+    CAMPS.push({...payload,ini:toISO(ini),fin:toISO(fin),total:payload.totalFacturado,factura:payload.nroFactura,cobro:_('nv-cobest').value,estado:'ACTIVO'});
     save(LS.camps,CAMPS);flash('nv-ok');resetNV();renderDash();buildCliSelect();
   }catch(e){flashErr('nv-err',e.message);}
   finally{_('nv-load').style.display='none';}
 }
 function resetNV(){selSops=[];buildChips();['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs'].forEach(id=>_(id).value='');_('nv-avail').style.display='none';}
- 
+
 // ── COBRANZAS ─────────────────────────────────────────────
 let cobTab='pend';
 function setCobTab(t,el){cobTab=t;document.querySelectorAll('#page-cobranzas .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');renderCob();}
@@ -813,7 +842,7 @@ function renderCob(){
   _('cob-list').innerHTML=html||`<div class="empty">Sin resultados para este filtro.</div>`;
 }
 function irACobro(cli){buildCliSelect();_('nc-cli').value=cli;fillOrdenesCobro();_('cob-form-box').scrollIntoView({behavior:'smooth'});}
- 
+
 // ── COSTOS ────────────────────────────────────────────────
 let cosTab='form';
 function setCosTab(t,el){cosTab=t;document.querySelectorAll('#page-costos .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');_('cos-form').style.display=t==='form'?'block':'none';_('cos-lista').style.display=t==='lista'?'block':'none';if(t==='lista') renderGastos();}
@@ -847,23 +876,30 @@ function renderGastos(){
   _('cos-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Total neto gastos</div><div class="stat-val">$${fmt(totNeto)}</div></div><div class="stat"><div class="stat-lbl">IVA crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div><div class="stat"><div class="stat-lbl">Pendiente de pago</div><div class="stat-val" style="color:var(--orange)">$${fmt(pend)}</div></div>`;
   _('cos-tbody').innerHTML=lista.map(g=>{const iva=g.neto*(g.al/100),venc=g.est==='Pendiente'&&g.fechaPago<HOY;return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${g.id}</td><td>${fmtD(g.fecha)}</td><td>${g.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${g.sop||'General'}</td><td>${g.desc||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iva)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto+iva)}</td><td><span class="bdg ${g.est==='Pagado'?'bdg-ok':venc?'bdg-err':'bdg-w'}">${g.est}</span></td><td style="font-size:11px;color:${venc?'var(--red)':'var(--text3)'}">${fmtD(g.fechaPago)}</td></tr>`;}).join('')||`<tr><td colspan="10" class="empty">Sin gastos.</td></tr>`;
 }
- 
+
 // ── INVERSIONES ───────────────────────────────────────────
 let invTab='form';
 function setInvTab(t,el){invTab=t;document.querySelectorAll('#page-inversiones .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');_('inv-form').style.display=t==='form'?'block':'none';_('inv-lista').style.display=t==='lista'?'block':'none';if(t==='lista') renderInvLista();}
+function calcIvaInv(){
+  const m=parseFloat(_('iv-monto').value)||0;
+  const al=parseFloat(_('iv-iva-al').value)||0;
+  _('iv-iva').value=al?'$'+fmt(Math.round(m*(al/100))):'$0';
+}
 function calcDeprec(){const m=parseFloat(_('iv-monto').value)||0,v=parseInt(_('iv-vida').value)||60,r=parseFloat(_('iv-resid').value)||0;_('iv-dep').value=v>0?'$'+fmt(Math.round((m-r)/v))+'/mes':'—';}
 async function guardarInv(){
   const fecha=_('iv-fecha').value,monto=parseFloat(_('iv-monto').value)||0;
   if(!fecha||!monto){alert('Ingresá fecha y monto.');return;}
   const vida=parseInt(_('iv-vida').value)||60,resid=parseFloat(_('iv-resid').value)||0;
   const dep=vida>0?Math.round((monto-resid)/vida):0;
-  const inv={id:'I-'+(INVS.length+1).toString().padStart(2,'0'),fecha,sop:_('iv-sop').value,cat:_('iv-cat').value,desc:_('iv-desc').value,prov:_('iv-prov').value,monto,iva:parseFloat(_('iv-iva').value)||0,vida,resid,dep};
+  const ivaAl=parseFloat(_('iv-iva-al').value)||0;
+  const ivaInv=Math.round(monto*(ivaAl/100));
+  const inv={id:'I-'+(INVS.length+1).toString().padStart(2,'0'),fecha,sop:_('iv-sop').value,cat:_('iv-cat').value,desc:_('iv-desc').value,prov:_('iv-prov').value,monto,iva:ivaInv,vida,resid,dep};
   try{
     if(URL_GS) await api('saveInversion',{fecha:inv.fecha,soporte:inv.sop,categoria:inv.cat,descripcion:inv.desc,proveedor:inv.prov,monto:inv.monto,iva:inv.iva,vidaUtil:inv.vida,valorResidual:inv.resid});
     INVS.push(inv);save(LS.inv,INVS);flash('inv-ok');resetInv();renderIva();
   }catch(e){flashErr('inv-err',e.message);}
 }
-function resetInv(){['iv-fecha','iv-cat','iv-prov','iv-desc','iv-monto','iv-iva','iv-vida','iv-resid','iv-dep'].forEach(id=>_(id).value='');}
+function resetInv(){['iv-fecha','iv-cat','iv-prov','iv-desc','iv-monto','iv-iva','iv-vida','iv-resid','iv-dep'].forEach(id=>_(id).value='');_('iv-iva-al').value='21';}
 async function syncInversiones(){
   if(!URL_GS) return;
   try{
@@ -878,7 +914,7 @@ function renderInvLista(){
   _('inv-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Capital invertido</div><div class="stat-val">$${fmt(totMonto)}</div></div><div class="stat"><div class="stat-lbl">IVA a favor</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div><div class="stat"><div class="stat-lbl">Deprec. mensual</div><div class="stat-val" style="color:var(--orange)">$${fmt(totDep)}/mes</div></div>`;
   _('inv-tbody').innerHTML=INVS.map(i=>{const dep=Number(i.dep)||(i.vida>0?Math.round((i.monto-i.resid)/i.vida):0);return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${i.id}</td><td>${fmtD(i.fecha)}</td><td><span class="bdg bdg-blu">${i.sop}</span></td><td>${i.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${i.desc||'—'}</td><td style="font-size:11px;color:var(--text2)">${i.prov||'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(i.monto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(i.iva)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--orange)">$${fmt(dep)}/mes</td><td><span class="bdg ${(i.estado||'Activo')==='Activo'?'bdg-ok':'bdg-neu'}">${i.estado||'Activo'}</span></td></tr>`;}).join('')||`<tr><td colspan="10" class="empty">Sin inversiones. Hacé clic en ↻ Sincronizar.</td></tr>`;
 }
- 
+
 // ── IVA ───────────────────────────────────────────────────
 function setIvaTab(t,el){document.querySelectorAll('#page-iva .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');['res','deb','cred'].forEach(x=>_('iva-'+x).style.display=x===t?'block':'none');}
 function renderIva(){
@@ -899,14 +935,35 @@ function renderIva(){
   ];
   _('iva-cred-body').innerHTML=credRows.join('')||`<tr><td colspan="6" class="empty">Sin gastos o inversiones con IVA.</td></tr>`;
 }
- 
+
 // ── INIT ──────────────────────────────────────────────────
 buildChips();
 buildCliSelect();
 renderDash();
 renderDispGrid();
-if(URL_GS) testConn();
-else document.getElementById('cfg').style.display='flex';
+
+// Auto-sincronizar al abrir si hay URL guardada
+if(URL_GS){
+  // Conectar y sincronizar todo automáticamente
+  (async()=>{
+    const st=_('cfg-status');
+    try{
+      await api('ping');
+      st.textContent='✓ Conectado';st.style.color='var(--green)';
+      document.getElementById('cfg').style.display='none';
+      // Sincronizar en background sin bloquear la UI
+      syncOcupacion().then(()=>renderDash());
+      syncVentas().then(()=>{renderDash();buildCliSelect();});
+      syncGastos().then(()=>{renderIva();});
+      syncInversiones().then(()=>{renderIva();});
+    }catch(e){
+      st.textContent='✗ Sin conexión';st.style.color='var(--red)';
+      document.getElementById('cfg').style.display='flex';
+    }
+  })();
+} else {
+  document.getElementById('cfg').style.display='flex';
+}
 </script>
 </body>
 </html>
