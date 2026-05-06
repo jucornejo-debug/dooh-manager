@@ -538,88 +538,155 @@ async function syncAll(){
 // OCUP_HOY: vendido diario por soporte, leído directo del Sheet
 let OCUP_HOY = {}; // { 'T1-P1': { vendido: 100, cap: 2592 }, ... }
 
+function numSheet(v){
+  if(v === null || v === undefined || v === '') return 0;
+  if(typeof v === 'number') return v;
+  let s = String(v).trim();
+  if(!s) return 0;
+  // soporta "2.880", "2,880", "2880", "90%", "$ 1.000"
+  s = s.replace(/\s/g,'').replace(/\$/g,'').replace(/%/g,'');
+  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g,'');
+  else s = s.replace(',','.');
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function valOcup(row, keys){
+  for(const k of keys){
+    if(row && row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
+  }
+  return '';
+}
+
 async function syncOcupacion(){
   if(!URL_GS) return;
   try{
-    const r=await api('getOcupacion');
+    const r = await api('getOcupacion');
     OCUP_HOY = {};
-    (r.data||[]).forEach(row=>{
-      if(!row.id) return;
-      // Actualizar capacidad real en SOPS
-      const sop=SOPS.find(s=>s.id===row.id);
-      if(sop&&row.capDiaria>0) sop.cap=row.capDiaria;
-      // Guardar vendido diario actual
-      OCUP_HOY[row.id]={
-        vendido: Number(row.vendidoDiario)||0,
-        cap:     Number(row.capDiaria)||0,
-        disp:    Number(row.disponible)||0,
+
+    (r.data || []).forEach(row => {
+      const id = valOcup(row, ['id','ID soporte','ID Soporte','ID SOPORTE']);
+      if(!id) return;
+
+      const ubicacion = valOcup(row, ['ubicacion','Ubicación','UBICACIÓN']);
+      const capDiaria = numSheet(valOcup(row, ['capDiaria','Capacidad diaria','Capacidad Diaria','CAPACIDAD DIARIA']));
+      const vendidoDiario = numSheet(valOcup(row, ['vendidoDiario','Vendido diario','Vendido Diario','VENDIDO DIARIO']));
+      const disponible = numSheet(valOcup(row, ['disponible','Disponible','DISPONIBLE']));
+      const pctActual = valOcup(row, ['pctActual','% Ocupación Actual','% ocupación actual']);
+
+      const sop = SOPS.find(s => s.id === id);
+
+      if(sop && capDiaria > 0){
+        sop.cap = capDiaria;
+        if(ubicacion) sop.loc = ubicacion;
+      }
+
+      OCUP_HOY[id] = {
+        vendido: vendidoDiario,
+        cap: capDiaria || (sop ? sop.cap : 0),
+        disp: disponible,
+        pctActual
       };
     });
+
     renderDash();
-  }catch(e){console.warn('syncOcupacion:',e.message);}
+  }catch(e){
+    console.warn('syncOcupacion:', e.message);
+  }
 }
 
 // ── OCUPACIÓN ─────────────────────────────────────────────
-// Calcula el promedio real de ocupación diaria en un período.
-// Para cada campaña que se superpone con el rango pedido,
-// cuenta los pases solo en los días donde efectivamente corre.
-// ── OCUPACIÓN ─────────────────────────────────────────────
-// Sin filtro de fechas: lee DIRECTO del Sheet (CONTROL GENERAL OCUPACIÓN)
-// Con fechas: calcula pico día a día desde VENTAS_DETALLE
-function ocupacionSoporte(sopId, desde, hasta) {
-  const cap = (SOPS.find(s => s.id === sopId) || {}).cap || 2592;
+// Sin filtro de fechas: lee DIRECTO del Sheet CONTROL GENERAL OCUPACIÓN.
+// Con fechas: calcula pico día a día desde VENTAS_DETALLE / CAMPS.
+function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
+  const sop = SOPS.find(s => s.id === sopId) || {};
+  const cap = Number(sop.cap) || 2592;
 
+  const campsSop = CAMPS.filter(c =>
+    (c.soportes || []).includes(sopId) &&
+    c.ini &&
+    c.fin &&
+    (c.estado || '').toUpperCase() !== 'INACTIVO'
+  );
+
+  // Sin rango: mostrar ocupación actual desde CONTROL GENERAL OCUPACIÓN.
   if (!desde || !hasta) {
-    // HOY: usar datos del Sheet sincronizados (fuente de verdad)
     if (OCUP_HOY[sopId]) {
       const o = OCUP_HOY[sopId];
-      const vendido = o.vendido;
-      const capReal = o.cap || cap;
+      const vendido = Number(o.vendido) || 0;
+      const capReal = Number(o.cap) || cap;
+
       return {
         pico: vendido,
+        fechaPico: HOY,
+        fechasPico: [HOY],
         disponible: Math.max(0, capReal - vendido),
-        pct: Math.min(100, Math.round((vendido / capReal) * 100)),
-        label: 'hoy (Sheet)'
+        pct: capReal > 0 ? Math.min(100, Math.round((vendido / capReal) * 100)) : 0,
+        fechasSinDisponible: [],
+        diasConflicto: 0,
+        totalDias: 1,
+        label: 'hoy desde Sheet'
       };
     }
-    // Fallback: calcular desde campañas locales si no hay datos del Sheet
-    const campsSop = CAMPS.filter(c => (c.soportes||[]).includes(sopId) && c.ini && c.fin);
-    const hoyPases = campsSop
-      .filter(c => c.ini <= HOY && c.fin >= HOY)
-      .reduce((a,c) => a + Number(c.pases||0), 0);
+
+    // Fallback: si todavía no sincronizó Sheets, calcula solo el día actual desde VENTAS_DETALLE local.
+    desde = HOY;
+    hasta = HOY;
+  }
+
+  const dInicio = new Date(desde + 'T00:00:00');
+  const dFin = new Date(hasta + 'T00:00:00');
+
+  if (isNaN(dInicio.getTime()) || isNaN(dFin.getTime()) || dInicio > dFin) {
     return {
-      pico: hoyPases,
-      disponible: Math.max(0, cap - hoyPases),
-      pct: Math.min(100, Math.round((hoyPases / cap) * 100)),
-      label: 'hoy (local)'
+      pico: 0,
+      fechaPico: '',
+      fechasPico: [],
+      disponible: cap,
+      pct: 0,
+      fechasSinDisponible: [],
+      diasConflicto: 0,
+      totalDias: 0,
+      label: 'rango inválido'
     };
   }
 
-  // Con rango: iterar cada día y encontrar el pico
-  const dInicio = new Date(desde), dFin = new Date(hasta);
   const totalDias = Math.max(1, Math.round((dFin - dInicio) / 86400000) + 1);
+
   let picoPases = 0;
-  let diasConflicto = 0;
+  let fechasPico = [];
+  let fechasSinDisponible = [];
 
   for (let i = 0; i < totalDias; i++) {
     const dia = new Date(dInicio);
     dia.setDate(dia.getDate() + i);
     const diaStr = dia.toISOString().slice(0, 10);
 
-    // Suma pases de todas las campañas activas ese día específico
     const pasesDia = campsSop
       .filter(c => c.ini <= diaStr && c.fin >= diaStr)
       .reduce((a, c) => a + Number(c.pases || 0), 0);
 
-    if (pasesDia > picoPases) picoPases = pasesDia;
-    if (pasesDia >= cap) diasConflicto++;
+    if (pasesDia > picoPases) {
+      picoPases = pasesDia;
+      fechasPico = [diaStr];
+    } else if (pasesDia === picoPases) {
+      fechasPico.push(diaStr);
+    }
+
+    if (pasesSolicitados && pasesDia + pasesSolicitados > cap) {
+      fechasSinDisponible.push(diaStr);
+    }
   }
 
   return {
-    pico: picoPases,                              // día más ocupado
-    disponible: Math.max(0, cap - picoPases),     // lo que queda libre en el peor día
-    pct: Math.min(100, Math.round((picoPases / cap) * 100)),
-    diasConflicto,                                // días sin disponibilidad en el período
+    pico: picoPases,
+    fechaPico: fechasPico[0] || '',
+    fechasPico,
+    disponible: Math.max(0, cap - picoPases),
+    pct: cap > 0 ? Math.min(100, Math.round((picoPases / cap) * 100)) : 0,
+    fechasSinDisponible,
+    diasConflicto: fechasSinDisponible.length,
     totalDias,
     label: `pico en ${totalDias} días`
   };
@@ -630,28 +697,53 @@ function pasesEnPeriodo(sopId, desde, hasta) {
   return ocupacionSoporte(sopId, desde, hasta).pico;
 }
 
-const estOcup=p=>p>=90?'lleno':p>=25?'medio':'libre';
-const colOcup=p=>p>=90?'var(--red)':p>=25?'var(--orange)':'var(--green)';
-const lblOcup=p=>p>=90?'Sin disp.':p>=25?'Parcial':'Libre';
-const bdgOcup=p=>p>=90?'bdg-err':p>=25?'bdg-w':'bdg-ok';
+const estOcup = p => p >= 90 ? 'lleno' : p >= 25 ? 'medio' : 'libre';
+const colOcup = p => p >= 90 ? 'var(--red)' : p >= 25 ? 'var(--orange)' : 'var(--green)';
+const lblOcup = p => p >= 90 ? 'Sin disp.' : p >= 25 ? 'Parcial' : 'Libre';
+const bdgOcup = p => p >= 90 ? 'bdg-err' : p >= 25 ? 'bdg-w' : 'bdg-ok';
 
 function sopCardHTML(s, ocp, extra) {
-  const p = Math.min(100, Math.round((ocp / s.cap) * 100));
-  const disp = Math.max(0, s.cap - ocp);
-  const conflictoTxt = extra && extra.diasConflicto > 0
-    ? `<span style="color:var(--red);font-size:9px">⚠ ${extra.diasConflicto} día${extra.diasConflicto>1?'s':''} sin disp.</span>`
+  const cap = Number(s.cap) || 2592;
+  const p = cap > 0 ? Math.min(100, Math.round((ocp / cap) * 100)) : 0;
+  const disp = Math.max(0, cap - ocp);
+
+  const fechasPicoTxt = extra && extra.fechasPico && extra.fechasPico.length
+    ? extra.fechasPico.slice(0, 3).map(fmtD).join(', ') + (extra.fechasPico.length > 3 ? ` +${extra.fechasPico.length - 3} más` : '')
     : '';
+
+  const conflictoTxt = extra && extra.diasConflicto > 0
+    ? `<div style="color:var(--red);font-size:9.5px;margin-top:5px">⚠ ${extra.diasConflicto} día${extra.diasConflicto > 1 ? 's' : ''} sin disponibilidad</div>`
+    : '';
+
+  const picoTxt = fechasPicoTxt
+    ? `<div style="font-size:9.5px;color:var(--text2);margin-top:5px">Pico el ${fechasPicoTxt}</div>`
+    : '';
+
   return `<div class="sop-card">
     <div class="sop-top">
-      <div><div class="sop-id">${s.id}</div><div class="sop-loc">${s.loc}</div></div>
+      <div>
+        <div class="sop-id">${s.id}</div>
+        <div class="sop-loc">${s.loc}</div>
+      </div>
       <span class="bdg ${bdgOcup(p)}">${lblOcup(p)}</span>
     </div>
+
     <div class="sop-pct">${p}%</div>
-    <div class="bar"><div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div></div>
-    <div class="sop-foot"><span>${fmt(ocp)} pico/día</span><span>${fmt(disp)} libres</span></div>
+
+    <div class="bar">
+      <div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div>
+    </div>
+
+    <div class="sop-foot">
+      <span>${fmt(ocp)} pico/día</span>
+      <span>${fmt(disp)} libres</span>
+    </div>
+
+    ${picoTxt}
     ${conflictoTxt}
   </div>`;
 }
+
 
 // ── DASHBOARD ─────────────────────────────────────────────
 function renderDash(){
@@ -690,34 +782,79 @@ function renderDispGrid(){
   }).join('');
 }
 function checkDisp(){
-  const ini=_('dsp-ini').value, fin=_('dsp-fin').value;
-  const pases=parseInt(_('dsp-pases').value)||0, filtro=_('dsp-filt').value;
+  const ini = _('dsp-ini').value;
+  const fin = _('dsp-fin').value;
+  const pases = parseInt(_('dsp-pases').value) || 0;
+  const filtro = _('dsp-filt').value;
 
-  let lista=SOPS.map(s=>{
-    const oc = ini&&fin ? ocupacionSoporte(s.id,ini,fin) : {pico:0,disponible:s.cap,pct:0,diasConflicto:0,totalDias:1};
+  let lista = SOPS.map(s => {
+    const oc = ini && fin
+      ? ocupacionSoporte(s.id, ini, fin, pases)
+      : ocupacionSoporte(s.id, null, null, pases);
+
     const ok = !pases || pases <= oc.disponible;
-    return{s, oc, ok};
-  });
-  if(filtro==='ok') lista=lista.filter(x=>x.ok);
-  if(filtro==='no') lista=lista.filter(x=>!x.ok);
 
-  _('dsp-grid').innerHTML=lista.map(x=>{
-    const s=x.s, oc=x.oc, ok=x.ok;
-    const pAfter=Math.min(100,Math.round(((oc.pico+(ok&&pases?pases:0))/s.cap)*100));
-    const conflicto = oc.diasConflicto>0
-      ? `<div style="font-size:9.5px;color:var(--red);margin-top:4px">⚠ ${oc.diasConflicto} día${oc.diasConflicto>1?'s':''} sin disponibilidad en el período</div>` : '';
-    return`<div class="sop-card" style="border-color:${pases?(ok?'var(--green)':'var(--red)'):'var(--border)'}">
+    return { s, oc, ok };
+  });
+
+  if(filtro === 'ok') lista = lista.filter(x => x.ok);
+  if(filtro === 'no') lista = lista.filter(x => !x.ok);
+
+  _('dsp-grid').innerHTML = lista.map(x => {
+    const s = x.s;
+    const oc = x.oc;
+    const ok = x.ok;
+    const cap = Number(s.cap) || 2592;
+
+    const pAfter = cap > 0
+      ? Math.min(100, Math.round(((oc.pico + (pases || 0)) / cap) * 100))
+      : 0;
+
+    const fechasPicoTxt = oc.fechasPico && oc.fechasPico.length
+      ? oc.fechasPico.slice(0, 3).map(fmtD).join(', ') + (oc.fechasPico.length > 3 ? ` +${oc.fechasPico.length - 3} más` : '')
+      : '—';
+
+    const fechasProblemaTxt = oc.fechasSinDisponible && oc.fechasSinDisponible.length
+      ? oc.fechasSinDisponible.slice(0, 5).map(fmtD).join(', ') + (oc.fechasSinDisponible.length > 5 ? ` +${oc.fechasSinDisponible.length - 5} más` : '')
+      : '';
+
+    return `<div class="sop-card" style="border-color:${pases ? (ok ? 'var(--green)' : 'var(--red)') : 'var(--border)'}">
       <div class="sop-top">
-        <div><div class="sop-id">${s.id}</div><div class="sop-loc">${s.loc}</div></div>
-        <span class="bdg ${pases?(ok?'bdg-ok':'bdg-err'):bdgOcup(oc.pct)}">${pases?(ok?'Disponible':'Sin disp.'):lblOcup(oc.pct)}</span>
+        <div>
+          <div class="sop-id">${s.id}</div>
+          <div class="sop-loc">${s.loc}</div>
+        </div>
+
+        <span class="bdg ${pases ? (ok ? 'bdg-ok' : 'bdg-err') : bdgOcup(oc.pct)}">
+          ${pases ? (ok ? 'Disponible' : 'Sin disp.') : lblOcup(oc.pct)}
+        </span>
       </div>
-      <div class="sop-pct" style="color:${pases?(ok?'var(--green)':'var(--red)'):'inherit'}">${pAfter}%</div>
-      <div class="bar"><div class="bar-fill" style="width:${oc.pct}%;background:${colOcup(oc.pct)}"></div></div>
+
+      <div class="sop-pct" style="color:${pases ? (ok ? 'var(--green)' : 'var(--red)') : 'inherit'}">
+        ${pAfter}%
+      </div>
+
+      <div class="bar">
+        <div class="bar-fill" style="width:${oc.pct}%;background:${colOcup(oc.pct)}"></div>
+      </div>
+
       <div class="sop-foot">
         <span>Pico: ${fmt(oc.pico)}/día</span>
-        <span>Libres: <strong style="color:${ok?'var(--green)':'var(--red)'}">${fmt(oc.disponible)}</strong></span>
+        <span>Libres: <strong style="color:${ok ? 'var(--green)' : 'var(--red)'}">${fmt(oc.disponible)}</strong></span>
       </div>
-      ${conflicto}
+
+      <div style="font-size:9.5px;color:var(--text2);margin-top:5px">
+        Capacidad: ${fmt(cap)} pases/día
+      </div>
+
+      <div style="font-size:9.5px;color:var(--text2);margin-top:4px">
+        Fecha pico: ${fechasPicoTxt}
+      </div>
+
+      ${fechasProblemaTxt ? `
+        <div style="font-size:9.5px;color:var(--red);margin-top:5px">
+          No disponible para esta venta: ${fechasProblemaTxt}
+        </div>` : ''}
     </div>`;
   }).join('');
 }
@@ -774,25 +911,62 @@ function toggleChip(id){
   checkAvNV();
 }
 function checkAvNV(){
-  const ini=_('nv-ini').value, fin=_('nv-fin').value, pases=parseInt(_('nv-pases').value)||0;
-  const box=_('nv-avail');
-  if(!selSops.length||!ini||!fin||!pases){box.style.display='none';return;}
-  let rows='', anyBad=false;
-  selSops.forEach(sid=>{
-    const s=SOPS.find(x=>x.id===sid);
-    const oc=ocupacionSoporte(sid,ini,fin);
-    const ok=pases<=oc.disponible;
-    if(!ok) anyBad=true;
-    const pAfter=Math.min(100,Math.round(((oc.pico+pases)/s.cap)*100));
-    const conflicto=oc.diasConflicto>0
-      ? ` · <span style="color:var(--red)">⚠ ${oc.diasConflicto} día${oc.diasConflicto>1?'s':''} saturados</span>` : '';
-    rows+=`<div class="avail-row">
+  const ini = _('nv-ini').value;
+  const fin = _('nv-fin').value;
+  const pases = parseInt(_('nv-pases').value) || 0;
+  const box = _('nv-avail');
+
+  if(!selSops.length || !ini || !fin || !pases){
+    box.style.display = 'none';
+    return;
+  }
+
+  let rows = '';
+  let anyBad = false;
+
+  selSops.forEach(sid => {
+    const s = SOPS.find(x => x.id === sid);
+    if(!s) return;
+
+    const cap = Number(s.cap) || 2592;
+    const oc = ocupacionSoporte(sid, ini, fin, pases);
+    const ok = pases <= oc.disponible;
+
+    if(!ok) anyBad = true;
+
+    const pAfter = cap > 0
+      ? Math.min(100, Math.round(((oc.pico + pases) / cap) * 100))
+      : 0;
+
+    const fechasPicoTxt = oc.fechasPico && oc.fechasPico.length
+      ? oc.fechasPico.slice(0, 3).map(fmtD).join(', ') + (oc.fechasPico.length > 3 ? ` +${oc.fechasPico.length - 3} más` : '')
+      : '—';
+
+    const fechasProblemaTxt = oc.fechasSinDisponible && oc.fechasSinDisponible.length
+      ? oc.fechasSinDisponible.slice(0, 5).map(fmtD).join(', ') + (oc.fechasSinDisponible.length > 5 ? ` +${oc.fechasSinDisponible.length - 5} más` : '')
+      : '';
+
+    rows += `<div class="avail-row">
       <span style="font-weight:600">${sid}</span>
-      <span>Pico actual: ${fmt(oc.pico)} · Libres: <strong style="color:${ok?'var(--green)':'var(--red)'}">${fmt(oc.disponible)}</strong> · Solicitás: ${fmt(pases)} · Final: <strong style="color:${pAfter>=90?'var(--red)':pAfter>=60?'var(--orange)':'var(--green)'}">${pAfter}%</strong>${conflicto}</span>
+
+      <span>
+        Capacidad: ${fmt(cap)} ·
+        Pico: ${fmt(oc.pico)} el ${fechasPicoTxt} ·
+        Libres: <strong style="color:${ok ? 'var(--green)' : 'var(--red)'}">${fmt(oc.disponible)}</strong> ·
+        Solicitás: ${fmt(pases)} ·
+        Final: <strong style="color:${pAfter >= 90 ? 'var(--red)' : pAfter >= 60 ? 'var(--orange)' : 'var(--green)'}">${pAfter}%</strong>
+        ${fechasProblemaTxt ? `<br><span style="color:var(--red)">No entra: ${fechasProblemaTxt}</span>` : ''}
+      </span>
     </div>`;
   });
-  box.innerHTML=`<div class="avail"><div class="avail-title">Verificación por pico diario · ${ini} → ${fin}</div>${rows}${anyBad?'<div style="color:var(--red);margin-top:6px;font-size:11px">⚠ Disponibilidad insuficiente — el día más ocupado del período no tiene pases suficientes</div>':''}</div>`;
-  box.style.display='block';
+
+  box.innerHTML = `<div class="avail">
+    <div class="avail-title">Verificación por pico diario · ${fmtD(ini)} → ${fmtD(fin)}</div>
+    ${rows}
+    ${anyBad ? '<div style="color:var(--red);margin-top:6px;font-size:11px">⚠ Disponibilidad insuficiente en una o más fechas del período.</div>' : ''}
+  </div>`;
+
+  box.style.display = 'block';
 }
 async function guardarVenta(){
   const cli=_('nv-cli').value.trim(),ini=_('nv-ini').value,fin=_('nv-fin').value,pases=parseInt(_('nv-pases').value)||0;
