@@ -491,17 +491,29 @@ const _=id=>document.getElementById(id);
 const fmt=n=>Math.round(n||0).toLocaleString('es-AR');
 // Convierte cualquier formato de fecha a string ISO yyyy-mm-dd
 function toISO(s){
-  if(!s||s==='—'||s==='') return '';
-  if(typeof s==='number') return ''; // ignorar seriales numéricos de Sheets
-  s=String(s).trim();
-  // ya es ISO
+  if(!s || s === '—' || s === '') return '';
+
+  // Si viene Date desde algún origen JS
+  if(s instanceof Date && !isNaN(s.getTime())) return s.toISOString().slice(0,10);
+
+  // Si viene serial numérico de Sheets/Excel, se ignora para evitar fechas falsas
+  if(typeof s === 'number') return '';
+
+  s = String(s).trim();
+
+  // Ya viene ISO: yyyy-mm-dd
   if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-  // dd/mm/yyyy o dd-mm-yyyy
-  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-  // mm/dd/yyyy
-  const m2=s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})/);
-  if(m2){ const y=m2[3].length===2?'20'+m2[3]:m2[3]; return `${y}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`; }
+
+  // Formato argentino: dd/mm/yyyy, dd/mm/yy, dd-mm-yyyy o dd-mm-yy
+  // IMPORTANTE: esto tiene prioridad sobre mm/dd, porque tu Sheet está en formato argentino.
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(m){
+    const d = m[1].padStart(2,'0');
+    const mo = m[2].padStart(2,'0');
+    const y = m[3].length === 2 ? '20' + m[3] : m[3];
+    return `${y}-${mo}-${d}`;
+  }
+
   return '';
 }
 const fmtD=s=>{const iso=toISO(s);if(!iso)return'—';try{return new Date(iso+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch{return iso;}};
@@ -603,11 +615,15 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
   const sop = SOPS.find(s => s.id === sopId) || {};
   const cap = Number(sop.cap) || 2592;
 
+  // MUY IMPORTANTE:
+  // Para consultar disponibilidad por rango NO se debe filtrar por Estado = ACTIVO,
+  // porque esa columna suele indicar si la campaña está activa HOY.
+  // Una campaña futura puede figurar INACTIVO hoy, pero igual ocupa disponibilidad
+  // dentro de su propio período.
   const campsSop = CAMPS.filter(c =>
     (c.soportes || []).includes(sopId) &&
     c.ini &&
-    c.fin &&
-    (c.estado || '').toUpperCase() !== 'INACTIVO'
+    c.fin
   );
 
   // Sin rango: mostrar ocupación actual desde CONTROL GENERAL OCUPACIÓN.
@@ -619,8 +635,8 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
 
       return {
         pico: vendido,
-        fechaPico: HOY,
-        fechasPico: [HOY],
+        fechaPico: vendido > 0 ? HOY : '',
+        fechasPico: vendido > 0 ? [HOY] : [],
         disponible: Math.max(0, capReal - vendido),
         pct: capReal > 0 ? Math.min(100, Math.round((vendido / capReal) * 100)) : 0,
         fechasSinDisponible: [],
@@ -669,8 +685,8 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
 
     if (pasesDia > picoPases) {
       picoPases = pasesDia;
-      fechasPico = [diaStr];
-    } else if (pasesDia === picoPases) {
+      fechasPico = pasesDia > 0 ? [diaStr] : [];
+    } else if (pasesDia > 0 && pasesDia === picoPases) {
       fechasPico.push(diaStr);
     }
 
