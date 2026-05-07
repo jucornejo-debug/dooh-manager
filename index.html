@@ -516,14 +516,18 @@ async function testConn(){
   }catch(e){st.textContent='✗ '+e.message;st.style.color='var(--red)';}
 }
 
-async function api(action,payload={}){
-  if(!URL_GS) throw new Error('URL no configurada — hacé clic en ⚙ arriba a la derecha');
-  const p=new URLSearchParams({action,payload:JSON.stringify(payload)});
-  const r=await fetch(URL_GS+'?'+p,{redirect:'follow'});
-  const txt=await r.text();
-  let d;try{d=JSON.parse(txt);}catch{throw new Error('Respuesta inválida del servidor');}
-  if(!d.ok) throw new Error(d.error||'Error desconocido');
-  return d;
+function api(action,payload={}){
+  return new Promise((resolve,reject)=>{
+    if(!URL_GS){reject(new Error('URL no configurada — hacé clic en ⚙'));return;}
+    const cb='_cb_'+Math.random().toString(36).slice(2);
+    const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);reject(new Error('Timeout'));},15000);
+    window[cb]=data=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);data&&data.ok?resolve(data):reject(new Error(data&&data.error||'Error'));};
+    const p=new URLSearchParams({action,payload:JSON.stringify(payload),callback:cb});
+    const s=document.createElement('script');
+    s.src=URL_GS+'?'+p;
+    s.onerror=()=>{clearTimeout(t);delete window[cb];reject(new Error('Error de conexión'));};
+    document.head.appendChild(s);
+  });
 }
 
 // ── DATA ──────────────────────────────────────────────────
@@ -1073,10 +1077,10 @@ function renderCob(){
     html+=`<div class="cob-card">
       <div class="cob-top">
         <div><div style="font-weight:600;font-size:13px">${cli}</div><div style="font-size:10.5px;color:var(--text2);margin-top:2px">${campsCli.length} campaña${campsCli.length>1?'s':''} · ${pct}% cobrado</div></div>
-        <div style="text-align:right"><div style="font-weight:600">$${fmt(tot)}</div><div style="font-size:10.5px;color:${pend===0?'var(--green)':cobF>=pend?'var(--blue)':'var(--orange)'};margin-top:2px">${pend===0?'✓ Cobrado':cobF>=pend?'✓ Programado':'$'+fmt(pend)+' pendiente'}</div></div>
+        <div style="text-align:right"><div style="font-weight:600">$${fmt(tot)}</div><div style="font-size:10.5px;color:${pend===0?'var(--green)':cobF>=pend?'var(--blue)':'var(--orange)'};margin-top:2px">${pend===0?'✓ Cobrado completo':cobF>=pend?'✓ Programado ($'+fmt(cobF)+')':'⚠ $'+fmt(pend)+' sin programar'}</div></div>
       </div>
       <div class="cob-prog"><div class="cob-prog-fill" style="width:${pct}%"></div></div>
-      ${cobrosCli.map(c=>{const fut=c.fecha>HOY;return`<div class="cob-row"><div style="display:flex;align-items:center;gap:7px"><span class="chk ${!fut?'chk-ok':'chk-fut'}">${!fut?'✓':'○'}</span><span style="color:var(--text2)">${c.id}${c.obs?' · '+c.obs:''}</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.monto)}</span><span style="font-size:10.5px;color:${fut?'var(--blue)':'var(--text3)'}">${fmtD(c.fecha)}${fut?' →':''}</span><span class="bdg ${!fut?'bdg-ok':'bdg-blu'}">${!fut?'Cobrado':'Programado'}</span></div></div>`;}).join('')}
+      ${fmtD(c.fecha)}${fut?' ↗ programado':''}<div style="display:flex;align-items:center;gap:7px"><span class="chk ${!fut?'chk-ok':'chk-fut'}">${!fut?'✓':'○'}</span><span style="color:var(--text2)">${c.id}${c.obs?' · '+c.obs:''}</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.monto)}</span><span style="font-size:10.5px;color:${fut?'var(--blue)':'var(--text3)'}">${fmtD(c.fecha)}${fut?' →':''}</span><span class="bdg ${!fut?'bdg-ok':'bdg-blu'}">${!fut?'Cobrado':'Programado'}</span></div></div>`;}).join('')}
       <button class="btn btn-sec btn-sm" style="margin-top:8px" onclick="irACobro('${cli}')">+ Agregar cobro</button>
     </div>`;
   });
@@ -1103,7 +1107,7 @@ async function syncGastos(){
   if(!URL_GS) return;
   try{
     const r=await api('getCostos');
-    GASTOS=r.data.map(g=>({id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',neto:Number(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||''}));
+    GASTOS=r.data.map(g=>({id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',neto:numSheet(g['Monto Neto de IVA']),al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||''}));
     save(LS.gastos,GASTOS);renderGastos();renderIva();
   }catch(e){alert('Error gastos: '+e.message);}
 }
@@ -1145,7 +1149,7 @@ async function syncInversiones(){
   if(!URL_GS) return;
   try{
     const r=await api('getInversiones');
-    INVS=r.data.map(i=>({id:i['ID Inversión'],fecha:i['Fecha Adquisición'],sop:i['ID Soporte'],cat:i['Categoría'],desc:i['Descripción'],prov:i['Proveedor'],monto:Number(i['Monto Inversión'])||0,iva:Number(i['IVA A FAVOR'])||0,vida:Number(i['Vida Útil (meses)'])||60,resid:Number(i['Valor Residual'])||0,dep:Number(i['Depreciación Mensual'])||0,estado:i['Estado']||'Activo'}));
+    INVS=r.data.map(i=>({id:i['ID Inversión'],fecha:i['Fecha Adquisición'],sop:i['ID Soporte'],cat:i['Categoría'],desc:i['Descripción'],prov:i['Proveedor'],monto:numSheet(i['Monto Inversión']),iva:numSheet(i['IVA A FAVOR']),vida:Number(i['Vida Útil (meses)'])||60,resid:Number(i['Valor Residual'])||0,dep:Number(i['Depreciación Mensual'])||0,estado:i['Estado']||'Activo'}));
     save(LS.inv,INVS);renderInvLista();renderIva();
   }catch(e){alert('Error inversiones: '+e.message);}
 }
