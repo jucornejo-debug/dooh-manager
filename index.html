@@ -489,6 +489,14 @@ let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load
 // ── UTILS ─────────────────────────────────────────────────
 const _=id=>document.getElementById(id);
 const fmt=n=>Math.round(n||0).toLocaleString('es-AR');
+function numAR(v){
+  if(v === null || v === undefined || v === '') return 0;
+  let s = String(v).replace(/\$/g,'').replace(/\s/g,'').trim();
+  if(s.includes(',') && s.includes('.')) s = s.replace(/\./g,'').replace(',','.');
+  else if(s.includes(',')) s = s.replace(',','.');
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
 // Convierte cualquier formato de fecha a string ISO yyyy-mm-dd
 function toISO(s){
   if(!s || s === '—' || s === '') return '';
@@ -880,23 +888,45 @@ async function syncVentas(){
   if(!URL_GS) return;
   _('ven-loading').style.display='block';
   try{
-    const r=await api('getVentas');
-    const byOrden={};
-    (r.filas||[]).forEach(row=>{
-      const ord=row['N° Orden de Publicidad'];if(!ord) return;
-      if(!byOrden[ord]) byOrden[ord]={
-        orden:ord,cliente:row['Cliente'],
-        ini:toISO(row['Fecha Inicio']),fin:toISO(row['Fecha Fin']),
-        pases:Number(row['Pases'])||0,total:Number(row['Total Facturado'])||0,
-        factura:row['N° de Factura'],cobro:row['Estado Facturación']||'',
-        estado:row['Estado']||'',soportes:[]
-      };
+    const r = await api('getVentas');
+    const byOrden = {};
+
+    (r.filas || []).forEach(row => {
+      const ord = row['N° Orden de Publicidad'];
+      if(!ord) return;
+
+      if(!byOrden[ord]){
+        byOrden[ord] = {
+          orden: ord,
+          cliente: row['Cliente'],
+          ini: toISO(row['Fecha Inicio']),
+          fin: toISO(row['Fecha Fin']),
+          pases: Number(row['Pases']) || 0,
+          total: 0,
+          factura: row['N° de Factura'],
+          cobro: row['Estado Facturación'] || '',
+          estado: row['Estado'] || '',
+          soportes: []
+        };
+      }
+
       if(row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
+
+      // Si el total se guardó dividido por pantalla, acá vuelve a sumarse por orden.
+      // Si la venta tiene una sola pantalla, queda igual.
+      byOrden[ord].total += numAR(row['Total Facturado']);
     });
-    CAMPS=Object.values(byOrden);
-    save(LS.camps,CAMPS);renderVentas();renderDash();buildCliSelect();
-  }catch(e){console.error('syncVentas:',e);}
-  finally{_('ven-loading').style.display='none';}
+
+    CAMPS = Object.values(byOrden);
+    save(LS.camps, CAMPS);
+    renderVentas();
+    renderDash();
+    buildCliSelect();
+  }catch(e){
+    console.error('syncVentas:', e);
+  }finally{
+    _('ven-loading').style.display='none';
+  }
 }
 function renderVentas(){
   const fe=_('ven-est').value;
@@ -985,16 +1015,58 @@ function checkAvNV(){
   box.style.display = 'block';
 }
 async function guardarVenta(){
-  const cli=_('nv-cli').value.trim(),ini=_('nv-ini').value,fin=_('nv-fin').value,pases=parseInt(_('nv-pases').value)||0;
-  if(!cli||!selSops.length||!ini||!fin||!pases){alert('Completá: cliente, al menos un soporte, fechas y pases.');return;}
-  const payload={orden:_('nv-orden').value.trim()||('OP-'+Date.now().toString().slice(-5)),cliente:cli,soportes:selSops,fechaInicio:ini,fechaFin:fin,pases,totalFacturado:parseFloat(_('nv-total').value)||0,nroFactura:_('nv-fac').value.trim()};
+  const cli = _('nv-cli').value.trim();
+  const ini = _('nv-ini').value;
+  const fin = _('nv-fin').value;
+  const pases = parseInt(_('nv-pases').value) || 0;
+
+  if(!cli || !selSops.length || !ini || !fin || !pases){
+    alert('Completá: cliente, al menos un soporte, fechas y pases.');
+    return;
+  }
+
+  const totalCampania = parseFloat(_('nv-total').value) || 0;
+  const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
+
+  const payload = {
+    orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
+    cliente: cli,
+    soportes: selSops,
+    fechaInicio: ini,
+    fechaFin: fin,
+    pases,
+    // IMPORTANTE: se manda dividido al GS porque el GS crea una fila por pantalla.
+    // Así no se multiplica el total facturado cuando hay varias pantallas.
+    totalFacturado: totalPorSoporte,
+    nroFactura: _('nv-fac').value.trim()
+  };
+
   _('nv-load').style.display='block';
+
   try{
-    if(URL_GS) await api('saveVenta',payload);
-    CAMPS.push({...payload,ini:toISO(ini),fin:toISO(fin),total:payload.totalFacturado,factura:payload.nroFactura,cobro:_('nv-cobest').value,estado:'ACTIVO'});
-    save(LS.camps,CAMPS);flash('nv-ok');resetNV();renderDash();buildCliSelect();
-  }catch(e){flashErr('nv-err',e.message);}
-  finally{_('nv-load').style.display='none';}
+    if(URL_GS) await api('saveVenta', payload);
+
+    // Localmente mantenemos el total real de la campaña para Dashboard/Cobranzas.
+    CAMPS.push({
+      ...payload,
+      ini: toISO(ini),
+      fin: toISO(fin),
+      total: totalCampania,
+      factura: payload.nroFactura,
+      cobro: _('nv-cobest').value,
+      estado: 'ACTIVO'
+    });
+
+    save(LS.camps, CAMPS);
+    flash('nv-ok');
+    resetNV();
+    renderDash();
+    buildCliSelect();
+  }catch(e){
+    flashErr('nv-err', e.message);
+  }finally{
+    _('nv-load').style.display='none';
+  }
 }
 function resetNV(){selSops=[];buildChips();['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs'].forEach(id=>_(id).value='');_('nv-avail').style.display='none';}
 
