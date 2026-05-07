@@ -100,29 +100,6 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .loading-row{text-align:center;color:var(--text3);padding:28px;font-size:12px}
-
-/* ── P&L TABLE STYLES ───────────────────────────────────── */
-.pyl-table{width:100%;border-collapse:collapse;font-size:12px}
-.pyl-table th{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:10px 14px;background:var(--bg2);border-bottom:2px solid var(--border2);text-align:right;white-space:nowrap}
-.pyl-table th:first-child{text-align:left}
-.pyl-table td{padding:7px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--text2)}
-.pyl-table td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;color:var(--text);padding-left:14px}
-.pyl-table td.indent{padding-left:28px;color:var(--text2);font-size:11.5px}
-.pyl-table tr.section-header td{background:var(--bg3);font-weight:600;font-family:'IBM Plex Sans',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:8px 14px;border-top:1px solid var(--border2)}
-.pyl-table tr.section-header td:first-child{text-align:left}
-.pyl-table tr.subtotal td{border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);font-weight:600;color:var(--text)}
-.pyl-table tr.subtotal td:first-child{font-family:'IBM Plex Mono',monospace;text-align:left;padding-left:14px}
-.pyl-table tr.total-row td{background:var(--bg3);border-top:2px solid var(--border2);font-weight:600;font-size:13px;color:var(--text);padding:11px 14px}
-.pyl-table tr.total-row td:first-child{text-align:left}
-.pyl-table tr.ebitda-row td{background:rgba(155,32,32,.08);border-top:2px solid var(--blue-dim);border-bottom:2px solid var(--blue-dim);font-weight:600;color:var(--text);padding:9px 14px}
-.pyl-table tr.ebitda-row td:first-child{text-align:left;color:var(--blue)}
-.pyl-table .val-pos{color:var(--green)!important}
-.pyl-table .val-neg{color:var(--red)!important}
-.pyl-table .val-neu{color:var(--text2)!important}
-.pyl-table tr:hover td{background:rgba(255,255,255,.012)}
-.pyl-table tr.section-header:hover td,.pyl-table tr.total-row:hover td,.pyl-table tr.ebitda-row:hover td{background:unset}
-.pyl-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
-.pyl-period-header{display:grid;gap:0;background:var(--bg2)}
 </style>
 </head>
 <body>
@@ -130,7 +107,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 <div class="cfg-strip" id="cfg">
   <span>⚡ Google Sheet URL:</span>
   <input type="url" id="cfg-url" placeholder="https://script.google.com/macros/s/…/exec" oninput="saveUrl()">
-  <button class="btn btn-prim btn-sm" id="btn-test" onclick="testConn()">Probar conexión</button>
+  <button class="btn btn-prim btn-sm" onclick="testConn()">Probar conexión</button>
   <span id="cfg-status"></span>
   <button class="btn btn-sec btn-sm" onclick="document.getElementById('cfg').style.display='none'" style="margin-left:auto">Ocultar</button>
 </div>
@@ -156,6 +133,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <button class="nav-btn" onclick="document.getElementById('cfg').style.display='flex'" style="margin-left:auto;color:var(--text3)">⚙</button>
 </div>
 
+<!-- DASHBOARD -->
 <div class="page on" id="page-dash">
   <div class="stats s4" id="ds-kpis"></div>
   <div class="fbar">
@@ -173,8 +151,1032 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <div class="sop-grid" id="ds-grid"></div>
 </div>
 
+<!-- DISPONIBILIDAD -->
 <div class="page" id="page-disponibilidad">
   <div class="form-box">
     <div class="form-title">Consultar disponibilidad antes de vender</div>
     <div class="fg2">
-      <div class="field"><label>Fecha inicio</label><input type="date"
+      <div class="field"><label>Fecha inicio</label><input type="date" id="dsp-ini" oninput="checkDisp()"></div>
+      <div class="field"><label>Fecha fin</label><input type="date" id="dsp-fin" oninput="checkDisp()"></div>
+      <div class="field"><label>Pases/día solicitados</label><input type="number" id="dsp-pases" min="1" max="2880" placeholder="240" oninput="checkDisp()"></div>
+      <div class="field"><label>Filtrar</label>
+        <select id="dsp-filt" onchange="checkDisp()">
+          <option value="">Todos los soportes</option>
+          <option value="ok">Solo disponibles</option>
+          <option value="no">Solo sin disponibilidad</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="sop-grid" id="dsp-grid"></div>
+</div>
+
+<!-- CAMPAÑAS -->
+<div class="page" id="page-ventas">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
+    <span id="ven-cnt" style="color:var(--text2);font-size:12px"></span>
+    <div style="display:flex;gap:8px">
+      <select id="ven-est" onchange="renderVentas()" style="font-size:12px;padding:5px 9px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text)">
+        <option value="">Todos</option><option>ACTIVO</option><option>INACTIVO</option>
+      </select>
+      <button class="btn btn-prim btn-sm" onclick="syncVentas()">↻ Sincronizar</button>
+    </div>
+  </div>
+  <div id="ven-loading" class="loading-row" style="display:none"><span class="spin"></span>Cargando...</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Orden</th><th>Cliente</th><th>Soportes</th><th>Período</th><th>Total</th><th>Factura</th><th>Estado cobro</th><th>Estado</th></tr></thead>
+      <tbody id="ven-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- NUEVA VENTA -->
+<div class="page" id="page-nueva-venta">
+  <div class="msg-ok" id="nv-ok">✓ Venta guardada en Google Sheets.</div>
+  <div class="msg-err" id="nv-err"></div>
+  <div id="nv-load" class="loading-row" style="display:none"><span class="spin"></span>Guardando...</div>
+  <div class="form-box">
+    <div class="form-title">Nueva venta / campaña</div>
+    <div class="fg2">
+      <div class="field"><label>N° Orden de publicidad</label><input type="text" id="nv-orden" placeholder="OP-2025-001"></div>
+      <div class="field"><label>Cliente / Anunciante</label><input type="text" id="nv-cli" placeholder="Farmacia del Centro"></div>
+      <div class="field"><label>Fecha inicio</label><input type="date" id="nv-ini" oninput="checkAvNV()"></div>
+      <div class="field"><label>Fecha fin</label><input type="date" id="nv-fin" oninput="checkAvNV()"></div>
+      <div class="field"><label>Pases por día (por soporte)</label><input type="number" id="nv-pases" min="1" max="2880" placeholder="240" oninput="checkAvNV()"></div>
+      <div class="field"><label>Total facturado ($)</label><input type="number" id="nv-total" placeholder="0"></div>
+      <div class="field"><label>N° Factura (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
+      <div class="field"><label>Estado cobro</label>
+        <select id="nv-cobest"><option>Pendiente</option><option>Parcialmente cobrado</option><option>Cobrado</option></select>
+      </div>
+      <div class="field full"><label>Soportes — seleccioná uno o más</label>
+        <div class="chips" id="nv-chips"></div>
+      </div>
+      <div class="full" id="nv-avail"></div>
+      <div class="field full"><label>Observaciones</label><textarea id="nv-obs" placeholder="Notas internas..."></textarea></div>
+    </div>
+    <div class="fa">
+      <button class="btn btn-sec" onclick="resetNV()">Limpiar</button>
+      <button class="btn btn-prim" onclick="guardarVenta()">Guardar en Sheets</button>
+    </div>
+  </div>
+</div>
+
+<!-- COBRANZAS -->
+<div class="page" id="page-cobranzas">
+  <div class="stats s4" id="cob-kpis"></div>
+  <div class="stabs">
+    <button class="stab on" onclick="setCobTab('pend',this)">Pendientes</button>
+    <button class="stab" onclick="setCobTab('prog',this)">Programados</button>
+    <button class="stab" onclick="setCobTab('ok',this)">Cobrados</button>
+    <button class="stab" onclick="setCobTab('all',this)">Todos</button>
+  </div>
+  <div class="form-box" id="cob-form-box">
+    <div class="form-title">Registrar cobro</div>
+    <div class="msg-ok" id="nc-ok">✓ Cobro registrado.</div>
+    <div class="msg-err" id="nc-err"></div>
+    <div class="fg2">
+      <div class="field"><label>Cliente</label>
+        <select id="nc-cli" onchange="fillOrdenesCobro()"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="field"><label>Orden</label>
+        <select id="nc-orden"><option value="">— elegí cliente —</option></select>
+      </div>
+      <div class="field"><label>Fecha de cobro</label>
+        <input type="date" id="nc-fecha">
+        <div class="hint">Fecha futura = cobro programado</div>
+      </div>
+      <div class="field"><label>Monto ($)</label><input type="number" id="nc-monto" placeholder="0" oninput="calcIvaCob()"></div>
+      <div class="field"><label>IVA incluido</label>
+        <select id="nc-iva" onchange="calcIvaCob()">
+          <option value="0">Sin IVA / Exento</option>
+          <option value="21">21%</option><option value="10.5">10.5%</option>
+        </select>
+      </div>
+      <div class="field"><label>IVA calculado ($)</label><input type="text" id="nc-iva-c" readonly></div>
+      <div class="field"><label>N° Factura</label><input type="text" id="nc-fac" placeholder="A-0001-00000123"></div>
+      <div class="field"><label>Forma de pago</label>
+        <select id="nc-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
+      </div>
+      <div class="field full"><label>Observaciones (ej: Cuota 1/2)</label><input type="text" id="nc-obs" placeholder=""></div>
+    </div>
+    <div class="fa">
+      <button class="btn btn-sec" onclick="resetCobro()">Limpiar</button>
+      <button class="btn btn-prim" onclick="guardarCobro()">Registrar cobro</button>
+    </div>
+  </div>
+  <div class="sec-hdr" style="margin-top:20px">Estado por cliente</div>
+  <div id="cob-list"></div>
+</div>
+
+<!-- COSTOS -->
+<div class="page" id="page-costos">
+  <div class="stabs">
+    <button class="stab on" onclick="setCosTab('form',this)">Registrar gasto</button>
+    <button class="stab" onclick="setCosTab('lista',this)">Ver gastos</button>
+  </div>
+  <div id="cos-form">
+    <div class="msg-ok" id="cg-ok">✓ Gasto registrado en Google Sheets.</div>
+    <div class="msg-err" id="cg-err"></div>
+    <div class="form-box">
+      <div class="form-title">Nuevo gasto</div>
+      <div class="fg2">
+        <div class="field"><label>Fecha del gasto</label><input type="date" id="cg-fecha"></div>
+        <div class="field"><label>Categoría</label>
+          <select id="cg-cat">
+            <option>Alquiler Locación</option><option>Luz</option><option>Internet</option>
+            <option>Mantenimiento</option><option>RRHH / Sueldos</option>
+            <option>Caja chica</option><option>Impuestos</option><option>Otro</option>
+          </select>
+        </div>
+        <div class="field"><label>Soporte (si aplica)</label>
+          <select id="cg-sop">
+            <option value="">General / sin soporte</option>
+            <option>T1-P1</option><option>T2-P1</option><option>T2-P2</option>
+            <option>T3-P1</option><option>T3-P2</option><option>T4-P1</option><option>T4-P2</option>
+            <option>T5-P1</option><option>T5-P2</option><option>T6-P1</option><option>T6-P2</option>
+            <option>T7-P1</option><option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
+          </select>
+        </div>
+        <div class="field"><label>Descripción</label><input type="text" id="cg-desc" placeholder="Ej: Reparación pantalla LED T3-P2"></div>
+        <div class="field"><label>Monto neto ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
+        <div class="field"><label>IVA</label>
+          <select id="cg-iva" onchange="calcIvaGasto()">
+            <option value="0">Sin IVA</option><option value="21">21%</option><option value="10.5">10.5%</option>
+          </select>
+        </div>
+        <div class="field"><label>IVA crédito fiscal ($)</label><input type="text" id="cg-iva-c" readonly></div>
+        <div class="field"><label>Estado de pago</label>
+          <select id="cg-est"><option>Pagado</option><option>Pendiente</option></select>
+        </div>
+        <div class="field"><label>Fecha de pago / vto.</label>
+          <input type="date" id="cg-fpago">
+          <div class="hint">Podés poner fecha futura para proyecciones.</div>
+        </div>
+        <div class="field"><label>Forma de pago</label>
+          <select id="cg-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
+        </div>
+      </div>
+      <div class="fa">
+        <button class="btn btn-sec" onclick="resetGasto()">Limpiar</button>
+        <button class="btn btn-prim" onclick="guardarGasto()">Registrar gasto</button>
+      </div>
+    </div>
+  </div>
+  <div id="cos-lista" style="display:none">
+    <div class="fbar">
+      <div class="fg"><label>Desde</label><input type="date" id="cl-desde" oninput="renderGastos()"></div>
+      <div class="fg"><label>Hasta</label><input type="date" id="cl-hasta" oninput="renderGastos()"></div>
+      <div class="fg"><label>Estado</label>
+        <select id="cl-est" onchange="renderGastos()">
+          <option value="">Todos</option><option>Pagado</option><option>Pendiente</option>
+        </select>
+      </div>
+      <button class="btn btn-prim btn-sm" onclick="syncGastos()">↻ Sincronizar</button>
+    </div>
+    <div class="stats s3" id="cos-kpis"></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Fecha</th><th>Categoría</th><th>Soporte</th><th>Descripción</th><th>Neto</th><th>IVA</th><th>Total</th><th>Estado</th><th>Vto/Pago</th></tr></thead>
+        <tbody id="cos-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- INVERSIONES -->
+<div class="page" id="page-inversiones">
+  <div class="stabs">
+    <button class="stab on" onclick="setInvTab('form',this)">Nueva inversión</button>
+    <button class="stab" onclick="setInvTab('lista',this)">Ver inversiones</button>
+  </div>
+  <div id="inv-form">
+    <div class="msg-ok" id="inv-ok">✓ Inversión registrada en Google Sheets.</div>
+    <div class="msg-err" id="inv-err"></div>
+    <div class="form-box">
+      <div class="form-title">Registrar inversión / activo fijo</div>
+      <div class="fg2">
+        <div class="field"><label>Fecha de adquisición</label><input type="date" id="iv-fecha"></div>
+        <div class="field"><label>Soporte</label>
+          <select id="iv-sop">
+            <option>T1-P1</option><option>T2-P1</option><option>T2-P2</option>
+            <option>T3-P1</option><option>T3-P2</option><option>T4-P1</option><option>T4-P2</option>
+            <option>T5-P1</option><option>T5-P2</option><option>T6-P1</option><option>T6-P2</option>
+            <option>T7-P1</option><option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
+          </select>
+        </div>
+        <div class="field"><label>Categoría</label><input type="text" id="iv-cat" placeholder="Pantalla LED, Estructura, etc."></div>
+        <div class="field"><label>Proveedor</label><input type="text" id="iv-prov" placeholder="Nombre del proveedor"></div>
+        <div class="field full"><label>Descripción</label><input type="text" id="iv-desc" placeholder="Detalle del activo adquirido"></div>
+        <div class="field"><label>Monto total ($)</label><input type="number" id="iv-monto" placeholder="0" oninput="calcIvaInv();calcDeprec()"></div>
+        <div class="field"><label>Alícuota IVA</label>
+          <select id="iv-iva-al" onchange="calcIvaInv()">
+            <option value="0">Sin IVA / Exento</option>
+            <option value="21" selected>21%</option>
+            <option value="10.5">10.5%</option>
+          </select>
+        </div>
+        <div class="field"><label>IVA a favor ($) — calculado</label><input type="text" id="iv-iva" readonly placeholder="0"></div>
+        <div class="field"><label>Vida útil (meses)</label>
+          <input type="number" id="iv-vida" placeholder="60" oninput="calcDeprec()">
+          <div class="hint">60 meses = 5 años típico para equipos</div>
+        </div>
+        <div class="field"><label>Valor residual ($)</label>
+          <input type="number" id="iv-resid" placeholder="0" oninput="calcDeprec()">
+        </div>
+        <div class="field"><label>Depreciación mensual (calculado)</label>
+          <input type="text" id="iv-dep" readonly placeholder="—">
+          <div class="hint">= (Monto − Residual) ÷ Vida útil</div>
+        </div>
+      </div>
+      <div class="fa">
+        <button class="btn btn-sec" onclick="resetInv()">Limpiar</button>
+        <button class="btn btn-prim" onclick="guardarInv()">Registrar inversión</button>
+      </div>
+    </div>
+  </div>
+  <div id="inv-lista" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span id="inv-cnt" style="font-size:12px;color:var(--text2)"></span>
+      <button class="btn btn-prim btn-sm" onclick="syncInversiones()">↻ Sincronizar</button>
+    </div>
+    <div class="stats s3" id="inv-kpis"></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Fecha</th><th>Soporte</th><th>Categoría</th><th>Descripción</th><th>Proveedor</th><th>Monto</th><th>IVA favor</th><th>Dep./mes</th><th>Estado</th></tr></thead>
+        <tbody id="inv-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- IVA -->
+<div class="page" id="page-iva">
+  <div class="stats s4" id="iva-kpis"></div>
+  <div class="divider"></div>
+  <div class="stabs">
+    <button class="stab on" onclick="setIvaTab('res',this)">Resumen mensual</button>
+    <button class="stab" onclick="setIvaTab('deb',this)">Débito fiscal</button>
+    <button class="stab" onclick="setIvaTab('cred',this)">Crédito fiscal</button>
+  </div>
+  <div id="iva-res">
+    <div class="sec-hdr">IVA mes a mes — débito (rojo) vs crédito (verde)</div>
+    <div id="iva-chart"></div>
+  </div>
+  <div id="iva-deb" style="display:none">
+    <div class="sec-hdr">IVA débito fiscal — cobros realizados</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Fecha</th><th>Cliente</th><th>Orden</th><th>Factura</th><th>Neto</th><th>IVA débito</th><th>Total</th></tr></thead>
+      <tbody id="iva-deb-body"></tbody>
+    </table></div>
+  </div>
+  <div id="iva-cred" style="display:none">
+    <div class="sec-hdr">IVA crédito fiscal — gastos e inversiones</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría / Descripción</th><th>Neto</th><th>IVA crédito</th><th>Total</th></tr></thead>
+      <tbody id="iva-cred-body"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+const LS={url:'dooh_url',camps:'dooh_camps',cobros:'dooh_cobros',gastos:'dooh_gastos',inv:'dooh_inv'};
+let URL_GS=localStorage.getItem(LS.url)||'';
+if(URL_GS) _('cfg-url').value=URL_GS;
+
+function saveUrl(){URL_GS=_('cfg-url').value.trim();localStorage.setItem(LS.url,URL_GS);}
+
+async function testConn(){
+  const st=_('cfg-status');
+  st.textContent='⏳ probando...';st.style.color='var(--text2)';
+  try{
+    await api('ping');
+    st.textContent='✓ Conectado';st.style.color='var(--green)';
+    setTimeout(()=>document.getElementById('cfg').style.display='none',1500);
+    syncAll();
+  }catch(e){st.textContent='✗ '+e.message;st.style.color='var(--red)';}
+}
+
+async function api(action,payload={}){
+  if(!URL_GS) throw new Error('URL no configurada — hacé clic en ⚙ arriba a la derecha');
+  const p=new URLSearchParams({action,payload:JSON.stringify(payload)});
+  const r=await fetch(URL_GS+'?'+p,{redirect:'follow'});
+  const txt=await r.text();
+  let d;try{d=JSON.parse(txt);}catch{throw new Error('Respuesta inválida del servidor');}
+  if(!d.ok) throw new Error(d.error||'Error desconocido');
+  return d;
+}
+
+// ── DATA ──────────────────────────────────────────────────
+// SOPS: capacidad base (se actualiza desde Sheets al sincronizar)
+let SOPS=[
+  {id:'T1-P1',loc:'Galería Margalef',cap:2592},
+  {id:'T2-P1',loc:'La Continental',cap:2880},{id:'T2-P2',loc:'La Continental',cap:2880},
+  {id:'T3-P1',loc:'El Palacio',cap:2880},{id:'T3-P2',loc:'El Palacio',cap:2880},
+  {id:'T4-P1',loc:'El Palacio',cap:2880},{id:'T4-P2',loc:'El Palacio',cap:2880},
+  {id:'T5-P1',loc:'El Punto',cap:2880},{id:'T5-P2',loc:'El Punto',cap:2880},
+  {id:'T6-P1',loc:'El Punto',cap:2880},{id:'T6-P2',loc:'El Punto',cap:2880},
+  {id:'T7-P1',loc:'Buenos Aires',cap:2880},{id:'T7-P2',loc:'Buenos Aires',cap:2880},
+  {id:'T8-P1',loc:'UCASAL',cap:2880},{id:'T8-P2',loc:'UCASAL',cap:2880},
+];
+
+function load(k,d=[]){try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load(LS.inv);
+
+// ── UTILS ─────────────────────────────────────────────────
+const _=id=>document.getElementById(id);
+const fmt=n=>Math.round(n||0).toLocaleString('es-AR');
+// Convierte cualquier formato de fecha a string ISO yyyy-mm-dd
+function toISO(s){
+  if(!s||s==='—'||s==='') return '';
+  if(typeof s==='number') return ''; // ignorar seriales numéricos de Sheets
+  s=String(s).trim();
+  // ya es ISO
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  // dd/mm/yyyy o dd-mm-yyyy
+  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  // mm/dd/yyyy
+  const m2=s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})/);
+  if(m2){ const y=m2[3].length===2?'20'+m2[3]:m2[3]; return `${y}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`; }
+  return '';
+}
+const fmtD=s=>{const iso=toISO(s);if(!iso)return'—';try{return new Date(iso+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch{return iso;}};
+const hoy=new Date();const HOY=hoy.toISOString().slice(0,10);
+const olap=(a,b,c,d)=>new Date(a)<=new Date(d)&&new Date(b)>=new Date(c);
+const ivaC=(m,a)=>a?Math.round(m*a/100/(1+a/100)):0;
+function flash(id){_(id).style.display='block';setTimeout(()=>_(id).style.display='none',3500);}
+function flashErr(id,msg){_(id).textContent='✗ '+msg;_(id).style.display='block';setTimeout(()=>_(id).style.display='none',5000);}
+
+// ── NAV ───────────────────────────────────────────────────
+function go(page,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  _('page-'+page).classList.add('on');
+  if(el) el.classList.add('active');
+  if(page==='dash') renderDash();
+  if(page==='disponibilidad') renderDispGrid();
+  if(page==='ventas'){renderVentas();syncVentas();}
+  if(page==='nueva-venta'){buildChips();buildCliSelect();}
+  if(page==='cobranzas'){buildCliSelect();renderCob();}
+  if(page==='costos') renderGastos();
+  if(page==='inversiones') renderInvLista();
+  if(page==='iva') renderIva();
+  if(page==='pyl'){setFechasDefecto('pyl');}
+  if(page==='cashflow'){setFechasDefecto('cf');}
+}
+
+async function syncAll(){
+  await syncOcupacion(); // primero — actualiza capacidades
+  await Promise.allSettled([syncVentas(),syncGastos(),syncInversiones()]);
+  renderDash();renderIva();
+}
+
+// OCUP_HOY: vendido diario por soporte, leído directo del Sheet
+let OCUP_HOY = {}; // { 'T1-P1': { vendido: 100, cap: 2592 }, ... }
+
+async function syncOcupacion(){
+  if(!URL_GS) return;
+  try{
+    const r=await api('getOcupacion');
+    OCUP_HOY = {};
+    (r.data||[]).forEach(row=>{
+      if(!row.id) return;
+      // Actualizar capacidad real en SOPS
+      const sop=SOPS.find(s=>s.id===row.id);
+      if(sop&&row.capDiaria>0) sop.cap=row.capDiaria;
+      // Guardar vendido diario actual
+      OCUP_HOY[row.id]={
+        vendido: Number(row.vendidoDiario)||0,
+        cap:     Number(row.capDiaria)||0,
+        disp:    Number(row.disponible)||0,
+      };
+    });
+    renderDash();
+  }catch(e){console.warn('syncOcupacion:',e.message);}
+}
+
+// ── OCUPACIÓN ─────────────────────────────────────────────
+// Calcula el promedio real de ocupación diaria en un período.
+// Para cada campaña que se superpone con el rango pedido,
+// cuenta los pases solo en los días donde efectivamente corre.
+// ── OCUPACIÓN ─────────────────────────────────────────────
+// Sin filtro de fechas: lee DIRECTO del Sheet (CONTROL GENERAL OCUPACIÓN)
+// Con fechas: calcula pico día a día desde VENTAS_DETALLE
+function ocupacionSoporte(sopId, desde, hasta) {
+  const cap = (SOPS.find(s => s.id === sopId) || {}).cap || 2592;
+
+  if (!desde || !hasta) {
+    // HOY: usar datos del Sheet sincronizados (fuente de verdad)
+    if (OCUP_HOY[sopId]) {
+      const o = OCUP_HOY[sopId];
+      const vendido = o.vendido;
+      const capReal = o.cap || cap;
+      return {
+        pico: vendido,
+        disponible: Math.max(0, capReal - vendido),
+        pct: Math.min(100, Math.round((vendido / capReal) * 100)),
+        label: 'hoy (Sheet)'
+      };
+    }
+    // Fallback: calcular desde campañas locales si no hay datos del Sheet
+    const campsSop = CAMPS.filter(c => (c.soportes||[]).includes(sopId) && c.ini && c.fin);
+    const hoyPases = campsSop
+      .filter(c => c.ini <= HOY && c.fin >= HOY)
+      .reduce((a,c) => a + Number(c.pases||0), 0);
+    return {
+      pico: hoyPases,
+      disponible: Math.max(0, cap - hoyPases),
+      pct: Math.min(100, Math.round((hoyPases / cap) * 100)),
+      label: 'hoy (local)'
+    };
+  }
+
+  // Con rango: iterar cada día y encontrar el pico
+  const dInicio = new Date(desde), dFin = new Date(hasta);
+  const totalDias = Math.max(1, Math.round((dFin - dInicio) / 86400000) + 1);
+  let picoPases = 0;
+  let diasConflicto = 0;
+
+  for (let i = 0; i < totalDias; i++) {
+    const dia = new Date(dInicio);
+    dia.setDate(dia.getDate() + i);
+    const diaStr = dia.toISOString().slice(0, 10);
+
+    // Suma pases de todas las campañas activas ese día específico
+    const pasesDia = campsSop
+      .filter(c => c.ini <= diaStr && c.fin >= diaStr)
+      .reduce((a, c) => a + Number(c.pases || 0), 0);
+
+    if (pasesDia > picoPases) picoPases = pasesDia;
+    if (pasesDia >= cap) diasConflicto++;
+  }
+
+  return {
+    pico: picoPases,                              // día más ocupado
+    disponible: Math.max(0, cap - picoPases),     // lo que queda libre en el peor día
+    pct: Math.min(100, Math.round((picoPases / cap) * 100)),
+    diasConflicto,                                // días sin disponibilidad en el período
+    totalDias,
+    label: `pico en ${totalDias} días`
+  };
+}
+
+// Wrapper simple para compatibilidad con código existente
+function pasesEnPeriodo(sopId, desde, hasta) {
+  return ocupacionSoporte(sopId, desde, hasta).pico;
+}
+
+const estOcup=p=>p>=90?'lleno':p>=25?'medio':'libre';
+const colOcup=p=>p>=90?'var(--red)':p>=25?'var(--orange)':'var(--green)';
+const lblOcup=p=>p>=90?'Sin disp.':p>=25?'Parcial':'Libre';
+const bdgOcup=p=>p>=90?'bdg-err':p>=25?'bdg-w':'bdg-ok';
+
+function sopCardHTML(s, ocp, extra) {
+  const p = Math.min(100, Math.round((ocp / s.cap) * 100));
+  const disp = Math.max(0, s.cap - ocp);
+  const conflictoTxt = extra && extra.diasConflicto > 0
+    ? `<span style="color:var(--red);font-size:9px">⚠ ${extra.diasConflicto} día${extra.diasConflicto>1?'s':''} sin disp.</span>`
+    : '';
+  return `<div class="sop-card">
+    <div class="sop-top">
+      <div><div class="sop-id">${s.id}</div><div class="sop-loc">${s.loc}</div></div>
+      <span class="bdg ${bdgOcup(p)}">${lblOcup(p)}</span>
+    </div>
+    <div class="sop-pct">${p}%</div>
+    <div class="bar"><div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div></div>
+    <div class="sop-foot"><span>${fmt(ocp)} pico/día</span><span>${fmt(disp)} libres</span></div>
+    ${conflictoTxt}
+  </div>`;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+function renderDash(){
+  const desde=_('dd-desde').value, hasta=_('dd-hasta').value, filtE=_('dd-est').value;
+  const cobrado=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  const totalFact=CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
+
+  let totP=0, libres=0, sinDisp=0;
+  SOPS.forEach(s=>{
+    const oc=ocupacionSoporte(s.id,desde,hasta);
+    totP+=oc.pct;
+    if(estOcup(oc.pct)==='libre') libres++;
+    if(estOcup(oc.pct)==='lleno') sinDisp++;
+  });
+
+  _('ds-kpis').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Ocupación pico${desde&&hasta?' — período':' — hoy'}</div><div class="stat-val">${Math.round(totP/SOPS.length)}%</div><div class="stat-sub">${desde&&hasta?fmtD(desde)+' → '+fmtD(hasta):'día actual'}</div></div>
+    <div class="stat"><div class="stat-lbl">Soportes disponibles</div><div class="stat-val">${libres}</div><div class="stat-sub">de ${SOPS.length} caras totales</div></div>
+    <div class="stat"><div class="stat-lbl">Cobrado</div><div class="stat-val" style="color:var(--green)">$${fmt(cobrado)}</div><div class="stat-sub">efectivizado</div></div>
+    <div class="stat"><div class="stat-lbl">Por cobrar</div><div class="stat-val" style="color:var(--orange)">$${fmt(Math.max(0,totalFact-cobrado))}</div><div class="stat-sub">pendiente</div></div>
+  `;
+
+  let lista=SOPS.map(s=>{
+    const oc=ocupacionSoporte(s.id,desde,hasta);
+    return{s, ocp:oc.pico, p:oc.pct, est:estOcup(oc.pct), extra:oc};
+  });
+  if(filtE) lista=lista.filter(x=>x.est===filtE);
+  _('ds-grid').innerHTML=lista.map(x=>sopCardHTML(x.s, x.ocp, x.extra)).join('');
+}
+
+// ── DISPONIBILIDAD ────────────────────────────────────────
+function renderDispGrid(){
+  _('dsp-grid').innerHTML=SOPS.map(s=>{
+    const oc=ocupacionSoporte(s.id,null,null);
+    return sopCardHTML(s,oc.pico);
+  }).join('');
+}
+function checkDisp(){
+  const ini=_('dsp-ini').value, fin=_('dsp-fin').value;
+  const pases=parseInt(_('dsp-pases').value)||0, filtro=_('dsp-filt').value;
+
+  let lista=SOPS.map(s=>{
+    const oc = ini&&fin ? ocupacionSoporte(s.id,ini,fin) : {pico:0,disponible:s.cap,pct:0,diasConflicto:0,totalDias:1};
+    const ok = !pases || pases <= oc.disponible;
+    return{s, oc, ok};
+  });
+  if(filtro==='ok') lista=lista.filter(x=>x.ok);
+  if(filtro==='no') lista=lista.filter(x=>!x.ok);
+
+  _('dsp-grid').innerHTML=lista.map(x=>{
+    const s=x.s, oc=x.oc, ok=x.ok;
+    const pAfter=Math.min(100,Math.round(((oc.pico+(ok&&pases?pases:0))/s.cap)*100));
+    const conflicto = oc.diasConflicto>0
+      ? `<div style="font-size:9.5px;color:var(--red);margin-top:4px">⚠ ${oc.diasConflicto} día${oc.diasConflicto>1?'s':''} sin disponibilidad en el período</div>` : '';
+    return`<div class="sop-card" style="border-color:${pases?(ok?'var(--green)':'var(--red)'):'var(--border)'}">
+      <div class="sop-top">
+        <div><div class="sop-id">${s.id}</div><div class="sop-loc">${s.loc}</div></div>
+        <span class="bdg ${pases?(ok?'bdg-ok':'bdg-err'):bdgOcup(oc.pct)}">${pases?(ok?'Disponible':'Sin disp.'):lblOcup(oc.pct)}</span>
+      </div>
+      <div class="sop-pct" style="color:${pases?(ok?'var(--green)':'var(--red)'):'inherit'}">${pAfter}%</div>
+      <div class="bar"><div class="bar-fill" style="width:${oc.pct}%;background:${colOcup(oc.pct)}"></div></div>
+      <div class="sop-foot">
+        <span>Pico: ${fmt(oc.pico)}/día</span>
+        <span>Libres: <strong style="color:${ok?'var(--green)':'var(--red)'}">${fmt(oc.disponible)}</strong></span>
+      </div>
+      ${conflicto}
+    </div>`;
+  }).join('');
+}
+
+// ── VENTAS ────────────────────────────────────────────────
+async function syncVentas(){
+  if(!URL_GS) return;
+  _('ven-loading').style.display='block';
+  try{
+    const r=await api('getVentas');
+    const byOrden={};
+    (r.filas||[]).forEach(row=>{
+      const ord=row['N° Orden de Publicidad'];if(!ord) return;
+      if(!byOrden[ord]) byOrden[ord]={
+        orden:ord,cliente:row['Cliente'],
+        ini:toISO(row['Fecha Inicio']),fin:toISO(row['Fecha Fin']),
+        pases:Number(row['Pases'])||0,total:Number(row['Total Facturado'])||0,
+        factura:row['N° de Factura'],cobro:row['Estado Facturación']||'',
+        estado:row['Estado']||'',soportes:[]
+      };
+      if(row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
+    });
+    CAMPS=Object.values(byOrden);
+    save(LS.camps,CAMPS);renderVentas();renderDash();buildCliSelect();
+  }catch(e){console.error('syncVentas:',e);}
+  finally{_('ven-loading').style.display='none';}
+}
+function renderVentas(){
+  const fe=_('ven-est').value;
+  let lista=CAMPS.slice().reverse();
+  if(fe) lista=lista.filter(c=>c.estado===fe);
+  _('ven-cnt').textContent=lista.length+' orden'+(lista.length!==1?'es':'');
+  _('ven-tbody').innerHTML=lista.map(c=>`<tr>
+    <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2)">${c.orden||'—'}</td>
+    <td style="font-weight:500">${c.cliente||'—'}</td>
+    <td style="font-size:11px;color:var(--text2)">${(c.soportes||[]).join(', ')||'—'}</td>
+    <td style="font-size:11px;white-space:nowrap">${fmtD(c.ini)}<br>${fmtD(c.fin)}</td>
+    <td style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.total)}</td>
+    <td style="font-size:11px">${c.factura||'—'}</td>
+    <td><span class="bdg ${c.cobro==='Cobrado'?'bdg-ok':c.cobro==='Pendiente'?'bdg-w':'bdg-blu'}">${c.cobro||'—'}</span></td>
+    <td><span class="bdg ${c.estado==='ACTIVO'?'bdg-ok':c.estado==='INACTIVO'?'bdg-neu':'bdg-w'}">${c.estado||'—'}</span></td>
+  </tr>`).join('')||`<tr><td colspan="8" class="empty">Sin campañas. Hacé clic en ↻ Sincronizar.</td></tr>`;
+}
+
+// ── NUEVA VENTA ───────────────────────────────────────────
+let selSops=[];
+function buildChips(){
+  selSops=[];
+  _('nv-chips').innerHTML=SOPS.map(s=>`<button class="chip" id="ch-${s.id}" onclick="toggleChip('${s.id}')"><span class="chip-id">${s.id}</span><span class="chip-loc">${s.loc}</span></button>`).join('');
+}
+function toggleChip(id){
+  const i=selSops.indexOf(id);if(i>-1) selSops.splice(i,1);else selSops.push(id);
+  SOPS.forEach(s=>{const el=_('ch-'+s.id);if(el) el.className='chip'+(selSops.includes(s.id)?' on':'');});
+  checkAvNV();
+}
+function checkAvNV(){
+  const ini=_('nv-ini').value, fin=_('nv-fin').value, pases=parseInt(_('nv-pases').value)||0;
+  const box=_('nv-avail');
+  if(!selSops.length||!ini||!fin||!pases){box.style.display='none';return;}
+  let rows='', anyBad=false;
+  selSops.forEach(sid=>{
+    const s=SOPS.find(x=>x.id===sid);
+    const oc=ocupacionSoporte(sid,ini,fin);
+    const ok=pases<=oc.disponible;
+    if(!ok) anyBad=true;
+    const pAfter=Math.min(100,Math.round(((oc.pico+pases)/s.cap)*100));
+    const conflicto=oc.diasConflicto>0
+      ? ` · <span style="color:var(--red)">⚠ ${oc.diasConflicto} día${oc.diasConflicto>1?'s':''} saturados</span>` : '';
+    rows+=`<div class="avail-row">
+      <span style="font-weight:600">${sid}</span>
+      <span>Pico actual: ${fmt(oc.pico)} · Libres: <strong style="color:${ok?'var(--green)':'var(--red)'}">${fmt(oc.disponible)}</strong> · Solicitás: ${fmt(pases)} · Final: <strong style="color:${pAfter>=90?'var(--red)':pAfter>=60?'var(--orange)':'var(--green)'}">${pAfter}%</strong>${conflicto}</span>
+    </div>`;
+  });
+  box.innerHTML=`<div class="avail"><div class="avail-title">Verificación por pico diario · ${ini} → ${fin}</div>${rows}${anyBad?'<div style="color:var(--red);margin-top:6px;font-size:11px">⚠ Disponibilidad insuficiente — el día más ocupado del período no tiene pases suficientes</div>':''}</div>`;
+  box.style.display='block';
+}
+async function guardarVenta(){
+  const cli=_('nv-cli').value.trim(),ini=_('nv-ini').value,fin=_('nv-fin').value,pases=parseInt(_('nv-pases').value)||0;
+  if(!cli||!selSops.length||!ini||!fin||!pases){alert('Completá: cliente, al menos un soporte, fechas y pases.');return;}
+  const payload={orden:_('nv-orden').value.trim()||('OP-'+Date.now().toString().slice(-5)),cliente:cli,soportes:selSops,fechaInicio:ini,fechaFin:fin,pases,totalFacturado:parseFloat(_('nv-total').value)||0,nroFactura:_('nv-fac').value.trim()};
+  _('nv-load').style.display='block';
+  try{
+    if(URL_GS) await api('saveVenta',payload);
+    CAMPS.push({...payload,ini:toISO(ini),fin:toISO(fin),total:payload.totalFacturado,factura:payload.nroFactura,cobro:_('nv-cobest').value,estado:'ACTIVO'});
+    save(LS.camps,CAMPS);flash('nv-ok');resetNV();renderDash();buildCliSelect();
+  }catch(e){flashErr('nv-err',e.message);}
+  finally{_('nv-load').style.display='none';}
+}
+function resetNV(){selSops=[];buildChips();['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs'].forEach(id=>_(id).value='');_('nv-avail').style.display='none';}
+
+// ── COBRANZAS ─────────────────────────────────────────────
+let cobTab='pend';
+function setCobTab(t,el){cobTab=t;document.querySelectorAll('#page-cobranzas .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');renderCob();}
+function buildCliSelect(){
+  const clis=[...new Set(CAMPS.map(c=>c.cliente).filter(Boolean))];
+  _('nc-cli').innerHTML='<option value="">Seleccionar...</option>'+clis.map(c=>`<option>${c}</option>`).join('');
+}
+function fillOrdenesCobro(){
+  const cli=_('nc-cli').value;
+  const camps=CAMPS.filter(c=>c.cliente===cli);
+  _('nc-orden').innerHTML=camps.length?camps.map(c=>`<option value="${c.orden}">${c.orden} — $${fmt(c.total)}</option>`).join(''):'<option value="">Sin campañas</option>';
+}
+function calcIvaCob(){const m=parseFloat(_('nc-monto').value)||0,a=parseFloat(_('nc-iva').value)||0;_('nc-iva-c').value=a?'$'+fmt(ivaC(m,a)):'$0';}
+async function guardarCobro(){
+  const cli=_('nc-cli').value,fecha=_('nc-fecha').value,monto=parseFloat(_('nc-monto').value)||0;
+  if(!cli||!fecha||!monto){alert('Completá cliente, fecha y monto.');return;}
+  const cobro={id:'C-'+(COBROS.length+1).toString().padStart(3,'0'),cliente:cli,orden:_('nc-orden').value,fecha,monto,ivaAl:parseFloat(_('nc-iva').value)||0,factura:_('nc-fac').value,pago:_('nc-pago').value,obs:_('nc-obs').value};
+  try{
+    if(URL_GS) await api('saveCobro',{orden:cobro.orden,cliente:cobro.cliente,fechaCobroProyectada:cobro.fecha,montoNeto:monto-ivaC(monto,cobro.ivaAl),iva:ivaC(monto,cobro.ivaAl),metodoPago:cobro.pago,fechaPagoReal:cobro.fecha<=HOY?cobro.fecha:''});
+    COBROS.push(cobro);save(LS.cobros,COBROS);flash('nc-ok');resetCobro();renderCob();renderDash();renderIva();
+  }catch(e){flashErr('nc-err',e.message);}
+}
+function resetCobro(){['nc-fecha','nc-monto','nc-fac','nc-obs','nc-iva-c'].forEach(id=>_(id).value='');_('nc-cli').value='';_('nc-iva').value='0';}
+function renderCob(){
+  const totalFact=CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
+  const cobHoy=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  const cobFut=COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  _('cob-kpis').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Total facturado</div><div class="stat-val">$${fmt(totalFact)}</div></div>
+    <div class="stat"><div class="stat-lbl">Cobrado</div><div class="stat-val" style="color:var(--green)">$${fmt(cobHoy)}</div></div>
+    <div class="stat"><div class="stat-lbl">Programado</div><div class="stat-val" style="color:var(--blue)">$${fmt(cobFut)}</div><div class="stat-sub">cobros futuros</div></div>
+    <div class="stat"><div class="stat-lbl">Sin programar</div><div class="stat-val" style="color:var(--orange)">$${fmt(Math.max(0,totalFact-cobHoy-cobFut))}</div></div>
+  `;
+  const clis=[...new Set(CAMPS.map(c=>c.cliente).filter(Boolean))];
+  let html='';
+  clis.forEach(cli=>{
+    const campsCli=CAMPS.filter(c=>c.cliente===cli);
+    const cobrosCli=COBROS.filter(c=>c.cliente===cli);
+    const tot=campsCli.reduce((a,c)=>a+Number(c.total||0),0);
+    const cobReal=cobrosCli.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+    const cobF=cobrosCli.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+    const pend=Math.max(0,tot-cobReal);
+    const pct=tot>0?Math.round((cobReal/tot)*100):0;
+    if(cobTab==='ok'&&pend>0) return;
+    if(cobTab==='pend'&&cobReal>=tot&&tot>0) return;
+    if(cobTab==='prog'&&cobF===0) return;
+    html+=`<div class="cob-card">
+      <div class="cob-top">
+        <div><div style="font-weight:600;font-size:13px">${cli}</div><div style="font-size:10.5px;color:var(--text2);margin-top:2px">${campsCli.length} campaña${campsCli.length>1?'s':''} · ${pct}% cobrado</div></div>
+        <div style="text-align:right"><div style="font-weight:600">$${fmt(tot)}</div><div style="font-size:10.5px;color:${pend===0?'var(--green)':cobF>=pend?'var(--blue)':'var(--orange)'};margin-top:2px">${pend===0?'✓ Cobrado':cobF>=pend?'✓ Programado':'$'+fmt(pend)+' pendiente'}</div></div>
+      </div>
+      <div class="cob-prog"><div class="cob-prog-fill" style="width:${pct}%"></div></div>
+      ${cobrosCli.map(c=>{const fut=c.fecha>HOY;return`<div class="cob-row"><div style="display:flex;align-items:center;gap:7px"><span class="chk ${!fut?'chk-ok':'chk-fut'}">${!fut?'✓':'○'}</span><span style="color:var(--text2)">${c.id}${c.obs?' · '+c.obs:''}</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.monto)}</span><span style="font-size:10.5px;color:${fut?'var(--blue)':'var(--text3)'}">${fmtD(c.fecha)}${fut?' →':''}</span><span class="bdg ${!fut?'bdg-ok':'bdg-blu'}">${!fut?'Cobrado':'Programado'}</span></div></div>`;}).join('')}
+      <button class="btn btn-sec btn-sm" style="margin-top:8px" onclick="irACobro('${cli}')">+ Agregar cobro</button>
+    </div>`;
+  });
+  _('cob-list').innerHTML=html||`<div class="empty">Sin resultados para este filtro.</div>`;
+}
+function irACobro(cli){buildCliSelect();_('nc-cli').value=cli;fillOrdenesCobro();_('cob-form-box').scrollIntoView({behavior:'smooth'});}
+
+// ── COSTOS ────────────────────────────────────────────────
+let cosTab='form';
+function setCosTab(t,el){cosTab=t;document.querySelectorAll('#page-costos .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');_('cos-form').style.display=t==='form'?'block':'none';_('cos-lista').style.display=t==='lista'?'block':'none';if(t==='lista') renderGastos();}
+function calcIvaGasto(){const m=parseFloat(_('cg-neto').value)||0,a=parseFloat(_('cg-iva').value)||0;_('cg-iva-c').value=a?'$'+fmt(m*(a/100)):'$0';}
+async function guardarGasto(){
+  const fecha=_('cg-fecha').value,neto=parseFloat(_('cg-neto').value)||0;
+  if(!fecha||!neto){alert('Ingresá fecha y monto.');return;}
+  const al=parseFloat(_('cg-iva').value)||0;
+  const g={id:'G-'+(GASTOS.length+1).toString().padStart(3,'0'),fecha,fechaPago:_('cg-fpago').value||fecha,cat:_('cg-cat').value,sop:_('cg-sop').value,desc:_('cg-desc').value,neto,al,est:_('cg-est').value,pago:_('cg-pago').value};
+  try{
+    if(URL_GS) await api('saveCosto',{fecha:g.fecha,fechaPago:g.fechaPago,soporte:g.sop,categoria:g.cat,descripcion:g.desc,monto:g.neto,formaPago:g.pago});
+    GASTOS.push(g);save(LS.gastos,GASTOS);flash('cg-ok');resetGasto();renderIva();
+  }catch(e){flashErr('cg-err',e.message);}
+}
+function resetGasto(){['cg-fecha','cg-fpago','cg-neto','cg-desc','cg-iva-c'].forEach(id=>_(id).value='');_('cg-iva').value='0';_('cg-sop').value='';_('cg-est').value='Pagado';}
+async function syncGastos(){
+  if(!URL_GS) return;
+  try{
+    const r=await api('getCostos');
+    GASTOS=r.data.map(g=>({id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',neto:Number(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||''}));
+    save(LS.gastos,GASTOS);renderGastos();renderIva();
+  }catch(e){alert('Error gastos: '+e.message);}
+}
+function renderGastos(){
+  const desde=_('cl-desde').value,hasta=_('cl-hasta').value,est=_('cl-est').value;
+  let lista=GASTOS.slice();
+  if(desde) lista=lista.filter(g=>g.fechaPago>=desde);
+  if(hasta) lista=lista.filter(g=>g.fechaPago<=hasta);
+  if(est) lista=lista.filter(g=>g.est===est);
+  const totNeto=lista.reduce((a,g)=>a+g.neto,0),totIva=lista.reduce((a,g)=>a+g.neto*(g.al/100),0),pend=lista.filter(g=>g.est==='Pendiente').reduce((a,g)=>a+g.neto,0);
+  _('cos-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Total neto gastos</div><div class="stat-val">$${fmt(totNeto)}</div></div><div class="stat"><div class="stat-lbl">IVA crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div><div class="stat"><div class="stat-lbl">Pendiente de pago</div><div class="stat-val" style="color:var(--orange)">$${fmt(pend)}</div></div>`;
+  _('cos-tbody').innerHTML=lista.map(g=>{const iva=g.neto*(g.al/100),venc=g.est==='Pendiente'&&g.fechaPago<HOY;return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${g.id}</td><td>${fmtD(g.fecha)}</td><td>${g.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${g.sop||'General'}</td><td>${g.desc||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iva)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto+iva)}</td><td><span class="bdg ${g.est==='Pagado'?'bdg-ok':venc?'bdg-err':'bdg-w'}">${g.est}</span></td><td style="font-size:11px;color:${venc?'var(--red)':'var(--text3)'}">${fmtD(g.fechaPago)}</td></tr>`;}).join('')||`<tr><td colspan="10" class="empty">Sin gastos.</td></tr>`;
+}
+
+// ── INVERSIONES ───────────────────────────────────────────
+let invTab='form';
+function setInvTab(t,el){invTab=t;document.querySelectorAll('#page-inversiones .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');_('inv-form').style.display=t==='form'?'block':'none';_('inv-lista').style.display=t==='lista'?'block':'none';if(t==='lista') renderInvLista();}
+function calcIvaInv(){
+  const m=parseFloat(_('iv-monto').value)||0;
+  const al=parseFloat(_('iv-iva-al').value)||0;
+  _('iv-iva').value=al?'$'+fmt(Math.round(m*(al/100))):'$0';
+}
+function calcDeprec(){const m=parseFloat(_('iv-monto').value)||0,v=parseInt(_('iv-vida').value)||60,r=parseFloat(_('iv-resid').value)||0;_('iv-dep').value=v>0?'$'+fmt(Math.round((m-r)/v))+'/mes':'—';}
+async function guardarInv(){
+  const fecha=_('iv-fecha').value,monto=parseFloat(_('iv-monto').value)||0;
+  if(!fecha||!monto){alert('Ingresá fecha y monto.');return;}
+  const vida=parseInt(_('iv-vida').value)||60,resid=parseFloat(_('iv-resid').value)||0;
+  const dep=vida>0?Math.round((monto-resid)/vida):0;
+  const ivaAl=parseFloat(_('iv-iva-al').value)||0;
+  const ivaInv=Math.round(monto*(ivaAl/100));
+  const inv={id:'I-'+(INVS.length+1).toString().padStart(2,'0'),fecha,sop:_('iv-sop').value,cat:_('iv-cat').value,desc:_('iv-desc').value,prov:_('iv-prov').value,monto,iva:ivaInv,vida,resid,dep};
+  try{
+    if(URL_GS) await api('saveInversion',{fecha:inv.fecha,soporte:inv.sop,categoria:inv.cat,descripcion:inv.desc,proveedor:inv.prov,monto:inv.monto,iva:inv.iva,vidaUtil:inv.vida,valorResidual:inv.resid});
+    INVS.push(inv);save(LS.inv,INVS);flash('inv-ok');resetInv();renderIva();
+  }catch(e){flashErr('inv-err',e.message);}
+}
+function resetInv(){['iv-fecha','iv-cat','iv-prov','iv-desc','iv-monto','iv-iva','iv-vida','iv-resid','iv-dep'].forEach(id=>_(id).value='');_('iv-iva-al').value='21';}
+async function syncInversiones(){
+  if(!URL_GS) return;
+  try{
+    const r=await api('getInversiones');
+    INVS=r.data.map(i=>({id:i['ID Inversión'],fecha:i['Fecha Adquisición'],sop:i['ID Soporte'],cat:i['Categoría'],desc:i['Descripción'],prov:i['Proveedor'],monto:Number(i['Monto Inversión'])||0,iva:Number(i['IVA A FAVOR'])||0,vida:Number(i['Vida Útil (meses)'])||60,resid:Number(i['Valor Residual'])||0,dep:Number(i['Depreciación Mensual'])||0,estado:i['Estado']||'Activo'}));
+    save(LS.inv,INVS);renderInvLista();renderIva();
+  }catch(e){alert('Error inversiones: '+e.message);}
+}
+function renderInvLista(){
+  const totMonto=INVS.reduce((a,i)=>a+Number(i.monto||0),0),totIva=INVS.reduce((a,i)=>a+Number(i.iva||0),0),totDep=INVS.reduce((a,i)=>a+Number(i.dep||0),0);
+  _('inv-cnt').textContent=INVS.length+' inversión'+(INVS.length!==1?'es':'');
+  _('inv-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Capital invertido</div><div class="stat-val">$${fmt(totMonto)}</div></div><div class="stat"><div class="stat-lbl">IVA a favor</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div><div class="stat"><div class="stat-lbl">Deprec. mensual</div><div class="stat-val" style="color:var(--orange)">$${fmt(totDep)}/mes</div></div>`;
+  _('inv-tbody').innerHTML=INVS.map(i=>{const dep=Number(i.dep)||(i.vida>0?Math.round((i.monto-i.resid)/i.vida):0);return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${i.id}</td><td>${fmtD(i.fecha)}</td><td><span class="bdg bdg-blu">${i.sop}</span></td><td>${i.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${i.desc||'—'}</td><td style="font-size:11px;color:var(--text2)">${i.prov||'—'}</td><td style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(i.monto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(i.iva)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--orange)">$${fmt(dep)}/mes</td><td><span class="bdg ${(i.estado||'Activo')==='Activo'?'bdg-ok':'bdg-neu'}">${i.estado||'Activo'}</span></td></tr>`;}).join('')||`<tr><td colspan="10" class="empty">Sin inversiones. Hacé clic en ↻ Sincronizar.</td></tr>`;
+}
+
+// ── IVA ───────────────────────────────────────────────────
+function setIvaTab(t,el){document.querySelectorAll('#page-iva .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');['res','deb','cred'].forEach(x=>_('iva-'+x).style.display=x===t?'block':'none');}
+function renderIva(){
+  const deb=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+ivaC(Number(c.monto||0),Number(c.ivaAl||0)),0);
+  const credG=GASTOS.reduce((a,g)=>a+g.neto*(g.al/100),0),credI=INVS.reduce((a,i)=>a+Number(i.iva||0),0),cred=credG+credI;
+  const saldo=deb-cred,futIva=COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+ivaC(Number(c.monto||0),Number(c.ivaAl||0)),0);
+  _('iva-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Débito fiscal</div><div class="stat-val" style="color:var(--red)">$${fmt(deb)}</div><div class="stat-sub">IVA cobros realizados</div></div><div class="stat"><div class="stat-lbl">Crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(cred)}</div><div class="stat-sub">Gastos + Inversiones</div></div><div class="stat"><div class="stat-lbl">Saldo IVA</div><div class="stat-val" style="color:${saldo>0?'var(--orange)':'var(--green)'}">$${fmt(Math.abs(saldo))}</div><div class="stat-sub">${saldo>0?'a pagar al fisco':'a tu favor'}</div></div><div class="stat"><div class="stat-lbl">IVA futuro</div><div class="stat-val" style="color:var(--blue)">$${fmt(futIva)}</div><div class="stat-sub">en cobros programados</div></div>`;
+  const meses={};
+  COBROS.forEach(c=>{const k=(c.fecha||'').slice(0,7);if(!k) return;if(!meses[k]) meses[k]={mes:k,deb:0,cred:0};meses[k].deb+=ivaC(Number(c.monto||0),Number(c.ivaAl||0));});
+  GASTOS.forEach(g=>{const k=(g.fecha||'').slice(0,7);if(!k) return;if(!meses[k]) meses[k]={mes:k,deb:0,cred:0};meses[k].cred+=g.neto*(g.al/100);});
+  INVS.forEach(i=>{const k=(i.fecha||'').slice(0,7);if(!k) return;if(!meses[k]) meses[k]={mes:k,deb:0,cred:0};meses[k].cred+=Number(i.iva||0);});
+  const arr=Object.values(meses).sort((a,b)=>a.mes.localeCompare(b.mes));
+  const maxV=Math.max(...arr.map(m=>Math.max(m.deb,m.cred)),1);
+  _('iva-chart').innerHTML=arr.length?arr.map(m=>{const s=m.deb-m.cred;return`<div class="iva-row"><span style="color:var(--text2);font-size:10.5px">${m.mes}</span><div style="position:relative;height:12px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.round((m.deb/maxV)*100)}%;background:var(--red);opacity:.8;border-radius:3px"></div><div style="position:absolute;bottom:0;left:0;height:5px;width:${Math.round((m.cred/maxV)*100)}%;background:var(--green);border-radius:3px"></div></div><span style="font-family:'IBM Plex Mono',monospace;color:var(--red);font-size:11px">-$${fmt(m.deb)}</span><span style="font-family:'IBM Plex Mono',monospace;color:var(--green);font-size:11px">+$${fmt(m.cred)}</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:${s>0?'var(--orange)':'var(--green)'}">=$${fmt(Math.abs(s))}</span></div>`;}).join(''):`<div class="empty">Sin datos de IVA aún.</div>`;
+  _('iva-deb-body').innerHTML=COBROS.map(c=>{const ivM=ivaC(Number(c.monto||0),Number(c.ivaAl||0)),neto=Number(c.monto||0)-ivM,fut=c.fecha>HOY;return`<tr><td style="color:${fut?'var(--blue)':'inherit'}">${fmtD(c.fecha)}${fut?' →':''}</td><td style="font-weight:500">${c.cliente||'—'}</td><td style="font-size:11px">${c.orden||'—'}</td><td style="font-size:11px">${c.factura||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--red)">$${fmt(ivM)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(c.monto)}</td></tr>`;}).join('')||`<tr><td colspan="7" class="empty">Sin cobros.</td></tr>`;
+  const credRows=[...GASTOS.filter(g=>g.al>0).map(g=>{const iv=g.neto*(g.al/100);return`<tr><td>${fmtD(g.fecha)}</td><td><span class="bdg bdg-neu">Gasto</span></td><td>${g.cat||''}${g.desc?' · '+g.desc:''}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iv)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto+iv)}</td></tr>`;}),
+    ...INVS.filter(i=>Number(i.iva)>0).map(i=>`<tr><td>${fmtD(i.fecha)}</td><td><span class="bdg bdg-blu">Inversión</span></td><td>${i.cat||''}${i.desc?' · '+i.desc:''}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(i.monto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(i.iva)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(Number(i.monto)+Number(i.iva))}</td></tr>`)
+  ];
+  _('iva-cred-body').innerHTML=credRows.join('')||`<tr><td colspan="6" class="empty">Sin gastos o inversiones con IVA.</td></tr>`;
+}
+
+
+// ── P&L ───────────────────────────────────────────────────
+function setFechasDefecto(prefix){
+  const now=new Date();
+  const ini=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+  const fin=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
+  _(prefix+'-desde').value=ini;
+  _(prefix+'-hasta').value=fin;
+  if(prefix==='pyl') renderPYL(); else renderCF();
+}
+
+function inPeriodo(fecha, desde, hasta){
+  if(!fecha||!desde||!hasta) return !desde&&!hasta;
+  const f=toISO(fecha);
+  return f>=desde&&f<=hasta;
+}
+
+// Prorratear ingreso de campaña al período consultado
+function ingresoProrateado(camp, desde, hasta){
+  if(!camp.ini||!camp.fin||!camp.total) return 0;
+  if(!desde||!hasta) return Number(camp.total)||0;
+  const ci=camp.ini, cf=camp.fin;
+  if(ci>hasta||cf<desde) return 0;
+  const totalDias=Math.max(1,Math.round((new Date(cf)-new Date(ci))/86400000)+1);
+  const solapIni=ci<desde?desde:ci;
+  const solapFin=cf>hasta?hasta:cf;
+  const diasSolap=Math.max(1,Math.round((new Date(solapFin)-new Date(solapIni))/86400000)+1);
+  return Math.round((Number(camp.total)||0)*(diasSolap/totalDias));
+}
+
+function renderPYL(){
+  const desde=_('pyl-desde').value, hasta=_('pyl-hasta').value;
+
+  // Ingresos: campañas que solapan el período
+  const ingRows=CAMPS.filter(c=>!desde||!hasta||!(c.fin<desde||c.ini>hasta));
+  const ingTotal=ingRows.reduce((a,c)=>a+ingresoProrateado(c,desde,hasta),0);
+
+  // Costos: gastos cuya fecha de pago cae en el período
+  const cosRows=GASTOS.filter(g=>inPeriodo(g.fechaPago||g.fecha,desde,hasta));
+  const cosTotal=cosRows.reduce((a,g)=>a+Number(g.neto||0),0);
+  const ivaCredito=cosRows.reduce((a,g)=>a+g.neto*(g.al/100),0);
+
+  // Depreciaciones del período
+  const depTotal=INVS.reduce((a,i)=>a+Number(i.dep||0),0);
+  const meses=desde&&hasta?Math.max(1,Math.round((new Date(hasta)-new Date(desde))/86400000/30)):1;
+  const depPeriodo=Math.round(depTotal*meses);
+
+  const resultado=ingTotal-cosTotal-depPeriodo;
+  const margen=ingTotal>0?Math.round((resultado/ingTotal)*100):0;
+
+  _('pyl-kpis').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Ingresos</div><div class="stat-val" style="color:var(--green)">$${fmt(ingTotal)}</div><div class="stat-sub">${ingRows.length} campaña${ingRows.length!==1?'s':''}</div></div>
+    <div class="stat"><div class="stat-lbl">Costos operativos</div><div class="stat-val" style="color:var(--red)">$${fmt(cosTotal)}</div><div class="stat-sub">+ dep. $${fmt(depPeriodo)}</div></div>
+    <div class="stat"><div class="stat-lbl">Resultado</div><div class="stat-val" style="color:${resultado>=0?'var(--green)':'var(--red)'}">$${fmt(resultado)}</div><div class="stat-sub">${resultado>=0?'utilidad':'pérdida'}</div></div>
+    <div class="stat"><div class="stat-lbl">Margen</div><div class="stat-val" style="color:${margen>=0?'var(--green)':'var(--red)'}">${margen}%</div><div class="stat-sub">sobre ingresos</div></div>
+  `;
+
+  _('pyl-ing-body').innerHTML=ingRows.map(c=>{
+    const monto=ingresoProrateado(c,desde,hasta);
+    return`<tr>
+      <td style="font-size:11px;color:var(--text2)">${c.orden||'—'}</td>
+      <td style="font-weight:500">${c.cliente||'—'}</td>
+      <td style="font-size:11px">${fmtD(c.ini)} → ${fmtD(c.fin)}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(monto)}</td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="4" class="empty">Sin ingresos en el período.</td></tr>`;
+  _('pyl-ing-total').textContent='$'+fmt(ingTotal);
+
+  _('pyl-cos-body').innerHTML=cosRows.map(g=>`<tr>
+    <td>${(g.cat||'').trim()||'—'}</td>
+    <td style="font-size:11px;color:var(--text2)">${g.desc||'—'}</td>
+    <td>${fmtD(g.fechaPago||g.fecha)}</td>
+    <td style="font-family:'IBM Plex Mono',monospace;color:var(--red)">$${fmt(g.neto)}</td>
+  </tr>`).join('')||`<tr><td colspan="4" class="empty">Sin costos en el período.</td></tr>`;
+  _('pyl-cos-total').textContent='$'+fmt(cosTotal);
+
+  _('pyl-dep').innerHTML=INVS.length
+    ?`${INVS.length} activo${INVS.length>1?'s':''} · $${fmt(depTotal)}/mes · $${fmt(depPeriodo)} en el período · IVA crédito acumulado: $${fmt(ivaCredito)}`
+    :'Sin inversiones registradas.';
+}
+
+// ── CASHFLOW ──────────────────────────────────────────────
+function renderCF(){
+  const desde=_('cf-desde').value, hasta=_('cf-hasta').value;
+
+  // Movimientos: cobros reales + pagos de gastos en el período
+  const movs=[];
+
+  // Ingresos cobrados (cobros con fecha en período)
+  COBROS.filter(c=>inPeriodo(c.fecha,desde,hasta)).forEach(c=>{
+    movs.push({fecha:toISO(c.fecha),tipo:'Cobro',det:c.cliente+(c.orden?' · '+c.orden:''),
+      ingreso:Number(c.monto||0),egreso:0,esFuturo:c.fecha>HOY});
+  });
+
+  // Egresos (gastos con fecha de pago en período)
+  GASTOS.filter(g=>inPeriodo(g.fechaPago||g.fecha,desde,hasta)).forEach(g=>{
+    movs.push({fecha:toISO(g.fechaPago||g.fecha),tipo:'Gasto',
+      det:(g.cat||'').trim()+(g.desc?' — '+g.desc:''),
+      ingreso:0,egreso:Number(g.neto||0)+(g.neto*(g.al/100)),esFuturo:(g.fechaPago||g.fecha)>HOY});
+  });
+
+  // Ordenar por fecha
+  movs.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
+  // Calcular saldo acumulado
+  let saldo=0;
+  const rows=movs.map(m=>{
+    saldo+=m.ingreso-m.egreso;
+    const fut=m.esFuturo;
+    return`<tr style="${fut?'opacity:.6':''}">
+      <td style="font-size:11px;color:${fut?'var(--blue)':'inherit'}">${fmtD(m.fecha)}${fut?' ↗':''}</td>
+      <td><span class="bdg ${m.tipo==='Cobro'?'bdg-ok':'bdg-err'}">${m.tipo}</span></td>
+      <td style="font-size:11.5px">${m.det}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">${m.ingreso>0?'$'+fmt(m.ingreso):''}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--red)">${m.egreso>0?'$'+fmt(m.egreso):''}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:${saldo>=0?'var(--green)':'var(--red)'}">$${fmt(saldo)}</td>
+    </tr>`;
+  });
+
+  const totIngr=movs.reduce((a,m)=>a+m.ingreso,0);
+  const totEgr=movs.reduce((a,m)=>a+m.egreso,0);
+  const saldoFinal=totIngr-totEgr;
+  const cobFuturos=COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  const pagFuturos=GASTOS.filter(g=>(g.fechaPago||g.fecha)>HOY&&g.est==='Pendiente').reduce((a,g)=>a+Number(g.neto||0),0);
+
+  _('cf-kpis').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Ingresos cobrados</div><div class="stat-val" style="color:var(--green)">$${fmt(totIngr)}</div></div>
+    <div class="stat"><div class="stat-lbl">Egresos pagados</div><div class="stat-val" style="color:var(--red)">$${fmt(totEgr)}</div></div>
+    <div class="stat"><div class="stat-lbl">Saldo del período</div><div class="stat-val" style="color:${saldoFinal>=0?'var(--green)':'var(--red)'}">$${fmt(saldoFinal)}</div></div>
+    <div class="stat"><div class="stat-lbl">Flujo futuro neto</div><div class="stat-val" style="color:var(--blue)">$${fmt(cobFuturos-pagFuturos)}</div><div class="stat-sub">cobros − pagos programados</div></div>
+  `;
+  _('cf-body').innerHTML=rows.join('')||`<tr><td colspan="6" class="empty">Sin movimientos en el período.</td></tr>`;
+}
+
+// Agregar PYL y CF al go()
+const _go_orig = go;
+
+// ── INIT ──────────────────────────────────────────────────
+buildChips();
+buildCliSelect();
+renderDash();
+renderDispGrid();
+
+// Auto-sincronizar al abrir si hay URL guardada
+if(URL_GS){
+  // Conectar y sincronizar todo automáticamente
+  (async()=>{
+    const st=_('cfg-status');
+    try{
+      await api('ping');
+      st.textContent='✓ Conectado';st.style.color='var(--green)';
+      document.getElementById('cfg').style.display='none';
+      // Sincronizar en background sin bloquear la UI
+      syncOcupacion().then(()=>renderDash());
+      syncVentas().then(()=>{renderDash();buildCliSelect();});
+      syncGastos().then(()=>{renderIva();});
+      syncInversiones().then(()=>{renderIva();});
+    }catch(e){
+      st.textContent='✗ Sin conexión';st.style.color='var(--red)';
+      document.getElementById('cfg').style.display='flex';
+    }
+  })();
+} else {
+  document.getElementById('cfg').style.display='flex';
+}
+</script>
+
+<!-- P&L -->
+<div class="page" id="page-pyl">
+  <div class="fbar">
+    <div class="fg"><label>Desde</label><input type="date" id="pyl-desde" oninput="renderPYL()"></div>
+    <div class="fg"><label>Hasta</label><input type="date" id="pyl-hasta" oninput="renderPYL()"></div>
+    <button class="btn btn-sec btn-sm" onclick="setFechasDefecto('pyl')">Mes actual</button>
+    <button class="btn btn-prim btn-sm" onclick="syncAll()">↻ Sincronizar</button>
+  </div>
+  <div class="stats s4" id="pyl-kpis"></div>
+  <div class="divider"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <div class="sec-hdr">Ingresos</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Orden</th><th>Cliente</th><th>Período</th><th>Monto</th></tr></thead>
+        <tbody id="pyl-ing-body"></tbody>
+        <tfoot><tr><td colspan="3" style="font-weight:600;padding:8px 12px">Total ingresos</td><td id="pyl-ing-total" style="font-weight:600;padding:8px 12px;font-family:'IBM Plex Mono',monospace"></td></tr></tfoot>
+      </table></div>
+    </div>
+    <div>
+      <div class="sec-hdr">Costos</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Categoría</th><th>Descripción</th><th>Fecha</th><th>Monto</th></tr></thead>
+        <tbody id="pyl-cos-body"></tbody>
+        <tfoot><tr><td colspan="3" style="font-weight:600;padding:8px 12px">Total costos</td><td id="pyl-cos-total" style="font-weight:600;padding:8px 12px;font-family:'IBM Plex Mono',monospace"></td></tr></tfoot>
+      </table></div>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="sec-hdr">Depreciaciones del período</div>
+  <div id="pyl-dep" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+</div>
+
+<!-- CASHFLOW -->
+<div class="page" id="page-cashflow">
+  <div class="fbar">
+    <div class="fg"><label>Desde</label><input type="date" id="cf-desde" oninput="renderCF()"></div>
+    <div class="fg"><label>Hasta</label><input type="date" id="cf-hasta" oninput="renderCF()"></div>
+    <button class="btn btn-sec btn-sm" onclick="setFechasDefecto('cf')">Mes actual</button>
+    <button class="btn btn-prim btn-sm" onclick="syncAll()">↻ Sincronizar</button>
+  </div>
+  <div class="stats s4" id="cf-kpis"></div>
+  <div class="divider"></div>
+  <div class="sec-hdr">Movimientos ordenados por fecha</div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Ingreso</th><th>Egreso</th><th>Saldo acum.</th></tr></thead>
+    <tbody id="cf-body"></tbody>
+  </table></div>
+</div>
+
+</body>
+</html>
