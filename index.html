@@ -500,7 +500,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 const LS={url:'dooh_url',camps:'dooh_camps',cobros:'dooh_cobros',gastos:'dooh_gastos',inv:'dooh_inv'};
-let URL_GS=localStorage.getItem(LS.url)||'';
+let URL_GS='https://script.google.com/macros/s/AKfycbz-VplWgD84wFC5b__rqXYHDT5r7ZJVJo5V80XdDkqg-vzArU9CyFAfui67G6HbDBfiKA/exec';
 if(URL_GS) document.getElementById('cfg-url').value=URL_GS;
 
 function saveUrl(){URL_GS=_('cfg-url').value.trim();localStorage.setItem(LS.url,URL_GS);}
