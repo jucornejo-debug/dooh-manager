@@ -129,7 +129,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 
 <div class="cfg-strip" id="cfg">
   <span>⚡ Google Sheet URL:</span>
-  <input type="url" id="cfg-url" placeholder="https://script.google.com/macros/s/…/exec" oninput="saveUrl()">
+  <input type="url" id="cfg-url" placeholder="https://script.google.com/macros/s/AKfycbx3sO-1aXsyyWU9p3Dq-tXQ24rE7s4Rr_mel0zplPYURwVFInig6bWVr4L09r_0oAioXA/execc" oninput="saveUrl()">
   <button class="btn btn-prim btn-sm" onclick="testConn()">Probar conexión</button>
   <span id="cfg-status"></span>
   <button class="btn btn-sec btn-sm" onclick="document.getElementById('cfg').style.display='none'" style="margin-left:auto">Ocultar</button>
@@ -500,7 +500,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 const LS={url:'dooh_url',camps:'dooh_camps',cobros:'dooh_cobros',gastos:'dooh_gastos',inv:'dooh_inv'};
-let URL_GS='https://script.google.com/macros/s/AKfycbz-VplWgD84wFC5b__rqXYHDT5r7ZJVJo5V80XdDkqg-vzArU9CyFAfui67G6HbDBfiKA/exec';
+let URL_GS='https://script.google.com/macros/s/AKfycbx3sO-1aXsyyWU9p3Dq-tXQ24rE7s4Rr_mel0zplPYURwVFInig6bWVr4L09r_0oAioXA/exec';
 if(URL_GS) document.getElementById('cfg-url').value=URL_GS;
 
 function saveUrl(){URL_GS=_('cfg-url').value.trim();localStorage.setItem(LS.url,URL_GS);}
