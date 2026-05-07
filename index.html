@@ -469,6 +469,30 @@ async function api(action,payload={}){
 }
 
 // ── DATA ──────────────────────────────────────────────────
+  function load(k, d=[]) {
+  try {
+    const val = localStorage.getItem(k);
+    if (!val) return d;
+    
+    const parsed = JSON.parse(val);
+    
+    if (Array.isArray(d) && !Array.isArray(parsed)) {
+      localStorage.removeItem(k);
+      return d;
+    }
+    
+    return parsed || d;
+  } catch(e) {
+    console.warn(`Memoria corrupta en ${k}, limpiando...`);
+    localStorage.removeItem(k); 
+    return d;
+  }
+}
+
+// ESTA ES LA LÍNEA QUE TE FALTA Y TENÉS QUE VOLVER A AGREGAR:
+function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load(LS.inv);
 // SOPS: capacidad base (se actualiza desde Sheets al sincronizar)
 let SOPS=[
   {id:'T1-P1',loc:'Galería Margalef',cap:2592},
