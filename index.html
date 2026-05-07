@@ -500,7 +500,13 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 const LS={url:'dooh_url',camps:'dooh_camps',cobros:'dooh_cobros',gastos:'dooh_gastos',inv:'dooh_inv'};
+
+// 💣 Limpiamos cualquier rastro del link viejo
+localStorage.removeItem(LS.url); 
+
+// ✅ El nuevo link que me pasaste (asegurándonos que termine en /exec)
 let URL_GS='https://script.google.com/macros/s/AKfycbx3sO-1aXsyyWU9p3Dq-tXQ24rE7s4Rr_mel0zplPYURwVFInig6bWVr4L09r_0oAioXA/exec';
+
 if(URL_GS) document.getElementById('cfg-url').value=URL_GS;
 
 function saveUrl(){URL_GS=_('cfg-url').value.trim();localStorage.setItem(LS.url,URL_GS);}
