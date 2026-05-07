@@ -100,6 +100,29 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .loading-row{text-align:center;color:var(--text3);padding:28px;font-size:12px}
+
+/* ── P&L TABLE STYLES ───────────────────────────────────── */
+.pyl-table{width:100%;border-collapse:collapse;font-size:12px}
+.pyl-table th{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:10px 14px;background:var(--bg2);border-bottom:2px solid var(--border2);text-align:right;white-space:nowrap}
+.pyl-table th:first-child{text-align:left}
+.pyl-table td{padding:7px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--text2)}
+.pyl-table td:first-child{font-family:'IBM Plex Sans',sans-serif;text-align:left;color:var(--text);padding-left:14px}
+.pyl-table td.indent{padding-left:28px;color:var(--text2);font-size:11.5px}
+.pyl-table tr.section-header td{background:var(--bg3);font-weight:600;font-family:'IBM Plex Sans',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:8px 14px;border-top:1px solid var(--border2)}
+.pyl-table tr.section-header td:first-child{text-align:left}
+.pyl-table tr.subtotal td{border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);font-weight:600;color:var(--text)}
+.pyl-table tr.subtotal td:first-child{font-family:'IBM Plex Mono',monospace;text-align:left;padding-left:14px}
+.pyl-table tr.total-row td{background:var(--bg3);border-top:2px solid var(--border2);font-weight:600;font-size:13px;color:var(--text);padding:11px 14px}
+.pyl-table tr.total-row td:first-child{text-align:left}
+.pyl-table tr.ebitda-row td{background:rgba(155,32,32,.08);border-top:2px solid var(--blue-dim);border-bottom:2px solid var(--blue-dim);font-weight:600;color:var(--text);padding:9px 14px}
+.pyl-table tr.ebitda-row td:first-child{text-align:left;color:var(--blue)}
+.pyl-table .val-pos{color:var(--green)!important}
+.pyl-table .val-neg{color:var(--red)!important}
+.pyl-table .val-neu{color:var(--text2)!important}
+.pyl-table tr:hover td{background:rgba(255,255,255,.012)}
+.pyl-table tr.section-header:hover td,.pyl-table tr.total-row:hover td,.pyl-table tr.ebitda-row:hover td{background:unset}
+.pyl-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.pyl-period-header{display:grid;gap:0;background:var(--bg2)}
 </style>
 </head>
 <body>
@@ -439,11 +462,46 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 </div>
 
+<!-- P&L — rediseñado como estado de resultados contable -->
+<div class="page" id="page-pyl">
+  <div class="fbar">
+    <div class="fg"><label>Período 1 — Desde</label><input type="date" id="pyl-desde" oninput="renderPYL()"></div>
+    <div class="fg"><label>Período 1 — Hasta</label><input type="date" id="pyl-hasta" oninput="renderPYL()"></div>
+    <div class="fg"><label>Período 2 — Desde</label><input type="date" id="pyl-desde2" oninput="renderPYL()"></div>
+    <div class="fg"><label>Período 2 — Hasta</label><input type="date" id="pyl-hasta2" oninput="renderPYL()"></div>
+    <button class="btn btn-sec btn-sm" onclick="setFechasDefecto('pyl')">Mes actual</button>
+    <button class="btn btn-prim btn-sm" onclick="syncAll()">↻ Sincronizar</button>
+  </div>
+  <div class="pyl-wrap">
+    <table class="pyl-table" id="pyl-main-table">
+      <thead id="pyl-thead"></thead>
+      <tbody id="pyl-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CASHFLOW -->
+<div class="page" id="page-cashflow">
+  <div class="fbar">
+    <div class="fg"><label>Desde</label><input type="date" id="cf-desde" oninput="renderCF()"></div>
+    <div class="fg"><label>Hasta</label><input type="date" id="cf-hasta" oninput="renderCF()"></div>
+    <button class="btn btn-sec btn-sm" onclick="setFechasDefecto('cf')">Mes actual</button>
+    <button class="btn btn-prim btn-sm" onclick="syncAll()">↻ Sincronizar</button>
+  </div>
+  <div class="stats s4" id="cf-kpis"></div>
+  <div class="divider"></div>
+  <div class="sec-hdr">Movimientos ordenados por fecha</div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Ingreso</th><th>Egreso</th><th>Saldo acum.</th></tr></thead>
+    <tbody id="cf-body"></tbody>
+  </table></div>
+</div>
+
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 const LS={url:'dooh_url',camps:'dooh_camps',cobros:'dooh_cobros',gastos:'dooh_gastos',inv:'dooh_inv'};
 let URL_GS=localStorage.getItem(LS.url)||'';
-if(URL_GS) _('cfg-url').value=URL_GS;
+if(URL_GS) document.getElementById('cfg-url').value=URL_GS;
 
 function saveUrl(){URL_GS=_('cfg-url').value.trim();localStorage.setItem(LS.url,URL_GS);}
 
@@ -469,7 +527,26 @@ async function api(action,payload={}){
 }
 
 // ── DATA ──────────────────────────────────────────────────
-// SOPS: capacidad base (se actualiza desde Sheets al sincronizar)
+function load(k, d=[]) {
+  try {
+    const val = localStorage.getItem(k);
+    if (!val) return d;
+    const parsed = JSON.parse(val);
+    if (Array.isArray(d) && !Array.isArray(parsed)) {
+      localStorage.removeItem(k);
+      return d;
+    }
+    return parsed || d;
+  } catch(e) {
+    console.warn(`Memoria corrupta en ${k}, limpiando...`);
+    localStorage.removeItem(k);
+    return d;
+  }
+}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load(LS.inv);
+
 let SOPS=[
   {id:'T1-P1',loc:'Galería Margalef',cap:2592},
   {id:'T2-P1',loc:'La Continental',cap:2880},{id:'T2-P2',loc:'La Continental',cap:2880},
@@ -481,27 +558,30 @@ let SOPS=[
   {id:'T8-P1',loc:'UCASAL',cap:2880},{id:'T8-P2',loc:'UCASAL',cap:2880},
 ];
 
-function load(k,d=[]){try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}}
-function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
-
-let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load(LS.inv);
-
 // ── UTILS ─────────────────────────────────────────────────
 const _=id=>document.getElementById(id);
 const fmt=n=>Math.round(n||0).toLocaleString('es-AR');
-// Convierte cualquier formato de fecha a string ISO yyyy-mm-dd
+function numAR(v){
+  if(v === null || v === undefined || v === '') return 0;
+  let s = String(v).replace(/\$/g,'').replace(/\s/g,'').trim();
+  if(s.includes(',') && s.includes('.')) s = s.replace(/\./g,'').replace(',','.');
+  else if(s.includes(',')) s = s.replace(',','.');
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
 function toISO(s){
-  if(!s||s==='—'||s==='') return '';
-  if(typeof s==='number') return ''; // ignorar seriales numéricos de Sheets
-  s=String(s).trim();
-  // ya es ISO
+  if(!s || s === '—' || s === '') return '';
+  if(s instanceof Date && !isNaN(s.getTime())) return s.toISOString().slice(0,10);
+  if(typeof s === 'number') return '';
+  s = String(s).trim();
   if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-  // dd/mm/yyyy o dd-mm-yyyy
-  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-  // mm/dd/yyyy
-  const m2=s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})/);
-  if(m2){ const y=m2[3].length===2?'20'+m2[3]:m2[3]; return `${y}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`; }
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(m){
+    const d = m[1].padStart(2,'0');
+    const mo = m[2].padStart(2,'0');
+    const y = m[3].length === 2 ? '20' + m[3] : m[3];
+    return `${y}-${mo}-${d}`;
+  }
   return '';
 }
 const fmtD=s=>{const iso=toISO(s);if(!iso)return'—';try{return new Date(iso+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch{return iso;}};
@@ -525,135 +605,194 @@ function go(page,el){
   if(page==='costos') renderGastos();
   if(page==='inversiones') renderInvLista();
   if(page==='iva') renderIva();
-  if(page==='pyl'){setFechasDefecto('pyl');}
-  if(page==='cashflow'){setFechasDefecto('cf');}
+  if(page==='pyl') setFechasDefecto('pyl');
+  if(page==='cashflow') setFechasDefecto('cf');
 }
 
 async function syncAll(){
-  await syncOcupacion(); // primero — actualiza capacidades
+  await syncOcupacion();
   await Promise.allSettled([syncVentas(),syncGastos(),syncInversiones()]);
   renderDash();renderIva();
 }
 
-// OCUP_HOY: vendido diario por soporte, leído directo del Sheet
-let OCUP_HOY = {}; // { 'T1-P1': { vendido: 100, cap: 2592 }, ... }
+let OCUP_HOY = {};
+
+function numSheet(v){
+  if(v === null || v === undefined || v === '') return 0;
+  if(typeof v === 'number') return v;
+  let s = String(v).trim();
+  if(!s) return 0;
+  s = s.replace(/\s/g,'').replace(/\$/g,'').replace(/%/g,'');
+  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g,'');
+  else s = s.replace(',','.');
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function valOcup(row, keys){
+  for(const k of keys){
+    if(row && row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
+  }
+  return '';
+}
 
 async function syncOcupacion(){
   if(!URL_GS) return;
   try{
-    const r=await api('getOcupacion');
+    const r = await api('getOcupacion');
     OCUP_HOY = {};
-    (r.data||[]).forEach(row=>{
-      if(!row.id) return;
-      // Actualizar capacidad real en SOPS
-      const sop=SOPS.find(s=>s.id===row.id);
-      if(sop&&row.capDiaria>0) sop.cap=row.capDiaria;
-      // Guardar vendido diario actual
-      OCUP_HOY[row.id]={
-        vendido: Number(row.vendidoDiario)||0,
-        cap:     Number(row.capDiaria)||0,
-        disp:    Number(row.disponible)||0,
+    (r.data || []).forEach(row => {
+      const id = valOcup(row, ['id','ID soporte','ID Soporte','ID SOPORTE']);
+      if(!id) return;
+      const ubicacion = valOcup(row, ['ubicacion','Ubicación','UBICACIÓN']);
+      const capDiaria = numSheet(valOcup(row, ['capDiaria','Capacidad diaria','Capacidad Diaria','CAPACIDAD DIARIA']));
+      const vendidoDiario = numSheet(valOcup(row, ['vendidoDiario','Vendido diario','Vendido Diario','VENDIDO DIARIO']));
+      const disponible = numSheet(valOcup(row, ['disponible','Disponible','DISPONIBLE']));
+      const pctActual = valOcup(row, ['pctActual','% Ocupación Actual','% ocupación actual']);
+      const sop = SOPS.find(s => s.id === id);
+      if(sop && capDiaria > 0){
+        sop.cap = capDiaria;
+        if(ubicacion) sop.loc = ubicacion;
+      }
+      OCUP_HOY[id] = {
+        vendido: vendidoDiario,
+        cap: capDiaria || (sop ? sop.cap : 0),
+        disp: disponible,
+        pctActual
       };
     });
     renderDash();
-  }catch(e){console.warn('syncOcupacion:',e.message);}
+  }catch(e){
+    console.warn('syncOcupacion:', e.message);
+  }
 }
 
 // ── OCUPACIÓN ─────────────────────────────────────────────
-// Calcula el promedio real de ocupación diaria en un período.
-// Para cada campaña que se superpone con el rango pedido,
-// cuenta los pases solo en los días donde efectivamente corre.
-// ── OCUPACIÓN ─────────────────────────────────────────────
-// Sin filtro de fechas: lee DIRECTO del Sheet (CONTROL GENERAL OCUPACIÓN)
-// Con fechas: calcula pico día a día desde VENTAS_DETALLE
-function ocupacionSoporte(sopId, desde, hasta) {
-  const cap = (SOPS.find(s => s.id === sopId) || {}).cap || 2592;
+function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
+  const sop = SOPS.find(s => s.id === sopId) || {};
+  const cap = Number(sop.cap) || 2592;
+
+  const campsSop = CAMPS.filter(c =>
+    (c.soportes || []).includes(sopId) &&
+    c.ini &&
+    c.fin
+  );
 
   if (!desde || !hasta) {
-    // HOY: usar datos del Sheet sincronizados (fuente de verdad)
     if (OCUP_HOY[sopId]) {
       const o = OCUP_HOY[sopId];
-      const vendido = o.vendido;
-      const capReal = o.cap || cap;
+      const vendido = Number(o.vendido) || 0;
+      const capReal = Number(o.cap) || cap;
       return {
         pico: vendido,
+        fechaPico: vendido > 0 ? HOY : '',
+        fechasPico: vendido > 0 ? [HOY] : [],
         disponible: Math.max(0, capReal - vendido),
-        pct: Math.min(100, Math.round((vendido / capReal) * 100)),
-        label: 'hoy (Sheet)'
+        pct: capReal > 0 ? Math.min(100, Math.round((vendido / capReal) * 100)) : 0,
+        fechasSinDisponible: [],
+        diasConflicto: 0,
+        totalDias: 1,
+        label: 'hoy desde Sheet'
       };
     }
-    // Fallback: calcular desde campañas locales si no hay datos del Sheet
-    const campsSop = CAMPS.filter(c => (c.soportes||[]).includes(sopId) && c.ini && c.fin);
-    const hoyPases = campsSop
-      .filter(c => c.ini <= HOY && c.fin >= HOY)
-      .reduce((a,c) => a + Number(c.pases||0), 0);
-    return {
-      pico: hoyPases,
-      disponible: Math.max(0, cap - hoyPases),
-      pct: Math.min(100, Math.round((hoyPases / cap) * 100)),
-      label: 'hoy (local)'
-    };
+    // Fallback sin Sheets: calcular desde campañas locales para hoy
+    desde = HOY;
+    hasta = HOY;
   }
 
-  // Con rango: iterar cada día y encontrar el pico
-  const dInicio = new Date(desde), dFin = new Date(hasta);
+  const dInicio = new Date(desde + 'T00:00:00');
+  const dFin = new Date(hasta + 'T00:00:00');
+
+  if (isNaN(dInicio.getTime()) || isNaN(dFin.getTime()) || dInicio > dFin) {
+    return { pico:0, fechaPico:'', fechasPico:[], disponible:cap, pct:0, fechasSinDisponible:[], diasConflicto:0, totalDias:0, label:'rango inválido' };
+  }
+
   const totalDias = Math.max(1, Math.round((dFin - dInicio) / 86400000) + 1);
   let picoPases = 0;
-  let diasConflicto = 0;
+  let fechasPico = [];
+  let fechasSinDisponible = [];
 
   for (let i = 0; i < totalDias; i++) {
     const dia = new Date(dInicio);
     dia.setDate(dia.getDate() + i);
     const diaStr = dia.toISOString().slice(0, 10);
-
-    // Suma pases de todas las campañas activas ese día específico
     const pasesDia = campsSop
       .filter(c => c.ini <= diaStr && c.fin >= diaStr)
       .reduce((a, c) => a + Number(c.pases || 0), 0);
-
-    if (pasesDia > picoPases) picoPases = pasesDia;
-    if (pasesDia >= cap) diasConflicto++;
+    if (pasesDia > picoPases) {
+      picoPases = pasesDia;
+      fechasPico = pasesDia > 0 ? [diaStr] : [];
+    } else if (pasesDia > 0 && pasesDia === picoPases) {
+      fechasPico.push(diaStr);
+    }
+    if (pasesSolicitados && pasesDia + pasesSolicitados > cap) {
+      fechasSinDisponible.push(diaStr);
+    }
   }
 
   return {
-    pico: picoPases,                              // día más ocupado
-    disponible: Math.max(0, cap - picoPases),     // lo que queda libre en el peor día
-    pct: Math.min(100, Math.round((picoPases / cap) * 100)),
-    diasConflicto,                                // días sin disponibilidad en el período
+    pico: picoPases,
+    fechaPico: fechasPico[0] || '',
+    fechasPico,
+    disponible: Math.max(0, cap - picoPases),
+    pct: cap > 0 ? Math.min(100, Math.round((picoPases / cap) * 100)) : 0,
+    fechasSinDisponible,
+    diasConflicto: fechasSinDisponible.length,
     totalDias,
     label: `pico en ${totalDias} días`
   };
 }
 
-// Wrapper simple para compatibilidad con código existente
 function pasesEnPeriodo(sopId, desde, hasta) {
   return ocupacionSoporte(sopId, desde, hasta).pico;
 }
 
-const estOcup=p=>p>=90?'lleno':p>=25?'medio':'libre';
-const colOcup=p=>p>=90?'var(--red)':p>=25?'var(--orange)':'var(--green)';
-const lblOcup=p=>p>=90?'Sin disp.':p>=25?'Parcial':'Libre';
-const bdgOcup=p=>p>=90?'bdg-err':p>=25?'bdg-w':'bdg-ok';
+const estOcup = p => p >= 90 ? 'lleno' : p >= 25 ? 'medio' : 'libre';
+const colOcup = p => p >= 90 ? 'var(--red)' : p >= 25 ? 'var(--orange)' : 'var(--green)';
+const lblOcup = p => p >= 90 ? 'Sin disp.' : p >= 25 ? 'Parcial' : 'Libre';
+const bdgOcup = p => p >= 90 ? 'bdg-err' : p >= 25 ? 'bdg-w' : 'bdg-ok';
 
 function sopCardHTML(s, ocp, extra) {
-  const p = Math.min(100, Math.round((ocp / s.cap) * 100));
-  const disp = Math.max(0, s.cap - ocp);
-  const conflictoTxt = extra && extra.diasConflicto > 0
-    ? `<span style="color:var(--red);font-size:9px">⚠ ${extra.diasConflicto} día${extra.diasConflicto>1?'s':''} sin disp.</span>`
+  const cap = Number(s.cap) || 2592;
+  const p = cap > 0 ? Math.min(100, Math.round((ocp / cap) * 100)) : 0;
+  const disp = Math.max(0, cap - ocp);
+
+  const fechasPicoTxt = extra && extra.fechasPico && extra.fechasPico.length
+    ? extra.fechasPico.slice(0, 3).map(fmtD).join(', ') + (extra.fechasPico.length > 3 ? ` +${extra.fechasPico.length - 3} más` : '')
     : '';
+
+  const conflictoTxt = extra && extra.diasConflicto > 0
+    ? `<div style="color:var(--red);font-size:9.5px;margin-top:5px">⚠ ${extra.diasConflicto} día${extra.diasConflicto > 1 ? 's' : ''} sin disponibilidad</div>`
+    : '';
+
+  const picoTxt = fechasPicoTxt
+    ? `<div style="font-size:9.5px;color:var(--text2);margin-top:5px">Pico el ${fechasPicoTxt}</div>`
+    : '';
+
   return `<div class="sop-card">
     <div class="sop-top">
-      <div><div class="sop-id">${s.id}</div><div class="sop-loc">${s.loc}</div></div>
+      <div>
+        <div class="sop-id">${s.id}</div>
+        <div class="sop-loc">${s.loc}</div>
+      </div>
       <span class="bdg ${bdgOcup(p)}">${lblOcup(p)}</span>
     </div>
     <div class="sop-pct">${p}%</div>
-    <div class="bar"><div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div></div>
-    <div class="sop-foot"><span>${fmt(ocp)} pico/día</span><span>${fmt(disp)} libres</span></div>
+    <div class="bar">
+      <div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div>
+    </div>
+    <div class="sop-foot">
+      <span>${fmt(ocp)} pico/día</span>
+      <span>${fmt(disp)} libres</span>
+    </div>
+    ${picoTxt}
     ${conflictoTxt}
   </div>`;
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
+// FIX: siempre renderiza la grilla de soportes, incluso sin datos de Sheets
 function renderDash(){
   const desde=_('dd-desde').value, hasta=_('dd-hasta').value, filtE=_('dd-est').value;
   const cobrado=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
@@ -661,7 +800,7 @@ function renderDash(){
 
   let totP=0, libres=0, sinDisp=0;
   SOPS.forEach(s=>{
-    const oc=ocupacionSoporte(s.id,desde,hasta);
+    const oc=ocupacionSoporte(s.id,desde||null,hasta||null);
     totP+=oc.pct;
     if(estOcup(oc.pct)==='libre') libres++;
     if(estOcup(oc.pct)==='lleno') sinDisp++;
@@ -674,8 +813,9 @@ function renderDash(){
     <div class="stat"><div class="stat-lbl">Por cobrar</div><div class="stat-val" style="color:var(--orange)">$${fmt(Math.max(0,totalFact-cobrado))}</div><div class="stat-sub">pendiente</div></div>
   `;
 
+  // Siempre mostrar todos los soportes, incluso si pct=0
   let lista=SOPS.map(s=>{
-    const oc=ocupacionSoporte(s.id,desde,hasta);
+    const oc=ocupacionSoporte(s.id,desde||null,hasta||null);
     return{s, ocp:oc.pico, p:oc.pct, est:estOcup(oc.pct), extra:oc};
   });
   if(filtE) lista=lista.filter(x=>x.est===filtE);
@@ -690,34 +830,63 @@ function renderDispGrid(){
   }).join('');
 }
 function checkDisp(){
-  const ini=_('dsp-ini').value, fin=_('dsp-fin').value;
-  const pases=parseInt(_('dsp-pases').value)||0, filtro=_('dsp-filt').value;
+  const ini = _('dsp-ini').value;
+  const fin = _('dsp-fin').value;
+  const pases = parseInt(_('dsp-pases').value) || 0;
+  const filtro = _('dsp-filt').value;
 
-  let lista=SOPS.map(s=>{
-    const oc = ini&&fin ? ocupacionSoporte(s.id,ini,fin) : {pico:0,disponible:s.cap,pct:0,diasConflicto:0,totalDias:1};
+  let lista = SOPS.map(s => {
+    const oc = ini && fin
+      ? ocupacionSoporte(s.id, ini, fin, pases)
+      : ocupacionSoporte(s.id, null, null, pases);
     const ok = !pases || pases <= oc.disponible;
-    return{s, oc, ok};
+    return { s, oc, ok };
   });
-  if(filtro==='ok') lista=lista.filter(x=>x.ok);
-  if(filtro==='no') lista=lista.filter(x=>!x.ok);
 
-  _('dsp-grid').innerHTML=lista.map(x=>{
-    const s=x.s, oc=x.oc, ok=x.ok;
-    const pAfter=Math.min(100,Math.round(((oc.pico+(ok&&pases?pases:0))/s.cap)*100));
-    const conflicto = oc.diasConflicto>0
-      ? `<div style="font-size:9.5px;color:var(--red);margin-top:4px">⚠ ${oc.diasConflicto} día${oc.diasConflicto>1?'s':''} sin disponibilidad en el período</div>` : '';
-    return`<div class="sop-card" style="border-color:${pases?(ok?'var(--green)':'var(--red)'):'var(--border)'}">
+  if(filtro === 'ok') lista = lista.filter(x => x.ok);
+  if(filtro === 'no') lista = lista.filter(x => !x.ok);
+
+  _('dsp-grid').innerHTML = lista.map(x => {
+    const s = x.s;
+    const oc = x.oc;
+    const ok = x.ok;
+    const cap = Number(s.cap) || 2592;
+
+    const pAfter = cap > 0
+      ? Math.min(100, Math.round(((oc.pico + (pases || 0)) / cap) * 100))
+      : 0;
+
+    const fechasPicoTxt = oc.fechasPico && oc.fechasPico.length
+      ? oc.fechasPico.slice(0, 3).map(fmtD).join(', ') + (oc.fechasPico.length > 3 ? ` +${oc.fechasPico.length - 3} más` : '')
+      : '—';
+
+    const fechasProblemaTxt = oc.fechasSinDisponible && oc.fechasSinDisponible.length
+      ? oc.fechasSinDisponible.slice(0, 5).map(fmtD).join(', ') + (oc.fechasSinDisponible.length > 5 ? ` +${oc.fechasSinDisponible.length - 5} más` : '')
+      : '';
+
+    return `<div class="sop-card" style="border-color:${pases ? (ok ? 'var(--green)' : 'var(--red)') : 'var(--border)'}">
       <div class="sop-top">
-        <div><div class="sop-id">${s.id}</div><div class="sop-loc">${s.loc}</div></div>
-        <span class="bdg ${pases?(ok?'bdg-ok':'bdg-err'):bdgOcup(oc.pct)}">${pases?(ok?'Disponible':'Sin disp.'):lblOcup(oc.pct)}</span>
+        <div>
+          <div class="sop-id">${s.id}</div>
+          <div class="sop-loc">${s.loc}</div>
+        </div>
+        <span class="bdg ${pases ? (ok ? 'bdg-ok' : 'bdg-err') : bdgOcup(oc.pct)}">
+          ${pases ? (ok ? 'Disponible' : 'Sin disp.') : lblOcup(oc.pct)}
+        </span>
       </div>
-      <div class="sop-pct" style="color:${pases?(ok?'var(--green)':'var(--red)'):'inherit'}">${pAfter}%</div>
-      <div class="bar"><div class="bar-fill" style="width:${oc.pct}%;background:${colOcup(oc.pct)}"></div></div>
+      <div class="sop-pct" style="color:${pases ? (ok ? 'var(--green)' : 'var(--red)') : 'inherit'}">
+        ${pAfter}%
+      </div>
+      <div class="bar">
+        <div class="bar-fill" style="width:${oc.pct}%;background:${colOcup(oc.pct)}"></div>
+      </div>
       <div class="sop-foot">
         <span>Pico: ${fmt(oc.pico)}/día</span>
-        <span>Libres: <strong style="color:${ok?'var(--green)':'var(--red)'}">${fmt(oc.disponible)}</strong></span>
+        <span>Libres: <strong style="color:${ok ? 'var(--green)' : 'var(--red)'}">${fmt(oc.disponible)}</strong></span>
       </div>
-      ${conflicto}
+      <div style="font-size:9.5px;color:var(--text2);margin-top:5px">Capacidad: ${fmt(cap)} pases/día</div>
+      <div style="font-size:9.5px;color:var(--text2);margin-top:4px">Fecha pico: ${fechasPicoTxt}</div>
+      ${fechasProblemaTxt ? `<div style="font-size:9.5px;color:var(--red);margin-top:5px">No disponible: ${fechasProblemaTxt}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -727,23 +896,38 @@ async function syncVentas(){
   if(!URL_GS) return;
   _('ven-loading').style.display='block';
   try{
-    const r=await api('getVentas');
-    const byOrden={};
-    (r.filas||[]).forEach(row=>{
-      const ord=row['N° Orden de Publicidad'];if(!ord) return;
-      if(!byOrden[ord]) byOrden[ord]={
-        orden:ord,cliente:row['Cliente'],
-        ini:toISO(row['Fecha Inicio']),fin:toISO(row['Fecha Fin']),
-        pases:Number(row['Pases'])||0,total:Number(row['Total Facturado'])||0,
-        factura:row['N° de Factura'],cobro:row['Estado Facturación']||'',
-        estado:row['Estado']||'',soportes:[]
-      };
+    const r = await api('getVentas');
+    const byOrden = {};
+    (r.filas || []).forEach(row => {
+      const ord = row['N° Orden de Publicidad'];
+      if(!ord) return;
+      if(!byOrden[ord]){
+        byOrden[ord] = {
+          orden: ord,
+          cliente: row['Cliente'],
+          ini: toISO(row['Fecha Inicio']),
+          fin: toISO(row['Fecha Fin']),
+          pases: Number(row['Pases']) || 0,
+          total: 0,
+          factura: row['N° de Factura'],
+          cobro: row['Estado Facturación'] || '',
+          estado: row['Estado'] || '',
+          soportes: []
+        };
+      }
       if(row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
+      byOrden[ord].total += numAR(row['Total Facturado']);
     });
-    CAMPS=Object.values(byOrden);
-    save(LS.camps,CAMPS);renderVentas();renderDash();buildCliSelect();
-  }catch(e){console.error('syncVentas:',e);}
-  finally{_('ven-loading').style.display='none';}
+    CAMPS = Object.values(byOrden);
+    save(LS.camps, CAMPS);
+    renderVentas();
+    renderDash();
+    buildCliSelect();
+  }catch(e){
+    console.error('syncVentas:', e);
+  }finally{
+    _('ven-loading').style.display='none';
+  }
 }
 function renderVentas(){
   const fe=_('ven-est').value;
@@ -774,36 +958,68 @@ function toggleChip(id){
   checkAvNV();
 }
 function checkAvNV(){
-  const ini=_('nv-ini').value, fin=_('nv-fin').value, pases=parseInt(_('nv-pases').value)||0;
-  const box=_('nv-avail');
-  if(!selSops.length||!ini||!fin||!pases){box.style.display='none';return;}
-  let rows='', anyBad=false;
-  selSops.forEach(sid=>{
-    const s=SOPS.find(x=>x.id===sid);
-    const oc=ocupacionSoporte(sid,ini,fin);
-    const ok=pases<=oc.disponible;
-    if(!ok) anyBad=true;
-    const pAfter=Math.min(100,Math.round(((oc.pico+pases)/s.cap)*100));
-    const conflicto=oc.diasConflicto>0
-      ? ` · <span style="color:var(--red)">⚠ ${oc.diasConflicto} día${oc.diasConflicto>1?'s':''} saturados</span>` : '';
-    rows+=`<div class="avail-row">
+  const ini = _('nv-ini').value;
+  const fin = _('nv-fin').value;
+  const pases = parseInt(_('nv-pases').value) || 0;
+  const box = _('nv-avail');
+
+  if(!selSops.length || !ini || !fin || !pases){ box.style.display='none'; return; }
+
+  let rows = '';
+  let anyBad = false;
+
+  selSops.forEach(sid => {
+    const s = SOPS.find(x => x.id === sid);
+    if(!s) return;
+    const cap = Number(s.cap) || 2592;
+    const oc = ocupacionSoporte(sid, ini, fin, pases);
+    const ok = pases <= oc.disponible;
+    if(!ok) anyBad = true;
+    const pAfter = cap > 0 ? Math.min(100, Math.round(((oc.pico + pases) / cap) * 100)) : 0;
+    const fechasPicoTxt = oc.fechasPico && oc.fechasPico.length
+      ? oc.fechasPico.slice(0, 3).map(fmtD).join(', ') + (oc.fechasPico.length > 3 ? ` +${oc.fechasPico.length - 3} más` : '')
+      : '—';
+    const fechasProblemaTxt = oc.fechasSinDisponible && oc.fechasSinDisponible.length
+      ? oc.fechasSinDisponible.slice(0, 5).map(fmtD).join(', ') + (oc.fechasSinDisponible.length > 5 ? ` +${oc.fechasSinDisponible.length - 5} más` : '')
+      : '';
+    rows += `<div class="avail-row">
       <span style="font-weight:600">${sid}</span>
-      <span>Pico actual: ${fmt(oc.pico)} · Libres: <strong style="color:${ok?'var(--green)':'var(--red)'}">${fmt(oc.disponible)}</strong> · Solicitás: ${fmt(pases)} · Final: <strong style="color:${pAfter>=90?'var(--red)':pAfter>=60?'var(--orange)':'var(--green)'}">${pAfter}%</strong>${conflicto}</span>
+      <span>
+        Capacidad: ${fmt(cap)} · Pico: ${fmt(oc.pico)} el ${fechasPicoTxt} ·
+        Libres: <strong style="color:${ok ? 'var(--green)' : 'var(--red)'}">${fmt(oc.disponible)}</strong> ·
+        Solicitás: ${fmt(pases)} · Final: <strong style="color:${pAfter >= 90 ? 'var(--red)' : pAfter >= 60 ? 'var(--orange)' : 'var(--green)'}">${pAfter}%</strong>
+        ${fechasProblemaTxt ? `<br><span style="color:var(--red)">No entra: ${fechasProblemaTxt}</span>` : ''}
+      </span>
     </div>`;
   });
-  box.innerHTML=`<div class="avail"><div class="avail-title">Verificación por pico diario · ${ini} → ${fin}</div>${rows}${anyBad?'<div style="color:var(--red);margin-top:6px;font-size:11px">⚠ Disponibilidad insuficiente — el día más ocupado del período no tiene pases suficientes</div>':''}</div>`;
-  box.style.display='block';
+
+  box.innerHTML = `<div class="avail">
+    <div class="avail-title">Verificación por pico diario · ${fmtD(ini)} → ${fmtD(fin)}</div>
+    ${rows}
+    ${anyBad ? '<div style="color:var(--red);margin-top:6px;font-size:11px">⚠ Disponibilidad insuficiente en una o más fechas del período.</div>' : ''}
+  </div>`;
+  box.style.display = 'block';
 }
 async function guardarVenta(){
-  const cli=_('nv-cli').value.trim(),ini=_('nv-ini').value,fin=_('nv-fin').value,pases=parseInt(_('nv-pases').value)||0;
-  if(!cli||!selSops.length||!ini||!fin||!pases){alert('Completá: cliente, al menos un soporte, fechas y pases.');return;}
-  const payload={orden:_('nv-orden').value.trim()||('OP-'+Date.now().toString().slice(-5)),cliente:cli,soportes:selSops,fechaInicio:ini,fechaFin:fin,pases,totalFacturado:parseFloat(_('nv-total').value)||0,nroFactura:_('nv-fac').value.trim()};
+  const cli = _('nv-cli').value.trim();
+  const ini = _('nv-ini').value;
+  const fin = _('nv-fin').value;
+  const pases = parseInt(_('nv-pases').value) || 0;
+  if(!cli || !selSops.length || !ini || !fin || !pases){ alert('Completá: cliente, al menos un soporte, fechas y pases.'); return; }
+  const totalCampania = parseFloat(_('nv-total').value) || 0;
+  const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
+  const payload = {
+    orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
+    cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases,
+    totalFacturado: totalPorSoporte, nroFactura: _('nv-fac').value.trim()
+  };
   _('nv-load').style.display='block';
   try{
-    if(URL_GS) await api('saveVenta',payload);
-    CAMPS.push({...payload,ini:toISO(ini),fin:toISO(fin),total:payload.totalFacturado,factura:payload.nroFactura,cobro:_('nv-cobest').value,estado:'ACTIVO'});
-    save(LS.camps,CAMPS);flash('nv-ok');resetNV();renderDash();buildCliSelect();
-  }catch(e){flashErr('nv-err',e.message);}
+    if(URL_GS) await api('saveVenta', payload);
+    CAMPS.push({...payload, ini:toISO(ini), fin:toISO(fin), total:totalCampania, factura:payload.nroFactura, cobro:_('nv-cobest').value, estado:'ACTIVO'});
+    save(LS.camps, CAMPS);
+    flash('nv-ok');resetNV();renderDash();buildCliSelect();
+  }catch(e){flashErr('nv-err', e.message);}
   finally{_('nv-load').style.display='none';}
 }
 function resetNV(){selSops=[];buildChips();['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs'].forEach(id=>_(id).value='');_('nv-avail').style.display='none';}
@@ -961,15 +1177,25 @@ function renderIva(){
   _('iva-cred-body').innerHTML=credRows.join('')||`<tr><td colspan="6" class="empty">Sin gastos o inversiones con IVA.</td></tr>`;
 }
 
-
-// ── P&L ───────────────────────────────────────────────────
+// ── P&L — ESTADO DE RESULTADOS CONTABLE ───────────────────
 function setFechasDefecto(prefix){
   const now=new Date();
   const ini=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
   const fin=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
-  _(prefix+'-desde').value=ini;
-  _(prefix+'-hasta').value=fin;
-  if(prefix==='pyl') renderPYL(); else renderCF();
+  // P&L: período 1 = mes actual, período 2 = mes anterior
+  if(prefix==='pyl'){
+    _(prefix+'-desde').value=ini;
+    _(prefix+'-hasta').value=fin;
+    const prevIni=new Date(now.getFullYear(),now.getMonth()-1,1).toISOString().slice(0,10);
+    const prevFin=new Date(now.getFullYear(),now.getMonth(),0).toISOString().slice(0,10);
+    _(prefix+'-desde2').value=prevIni;
+    _(prefix+'-hasta2').value=prevFin;
+    renderPYL();
+  } else {
+    _(prefix+'-desde').value=ini;
+    _(prefix+'-hasta').value=fin;
+    renderCF();
+  }
 }
 
 function inPeriodo(fecha, desde, hasta){
@@ -978,7 +1204,6 @@ function inPeriodo(fecha, desde, hasta){
   return f>=desde&&f<=hasta;
 }
 
-// Prorratear ingreso de campaña al período consultado
 function ingresoProrateado(camp, desde, hasta){
   if(!camp.ini||!camp.fin||!camp.total) return 0;
   if(!desde||!hasta) return Number(camp.total)||0;
@@ -991,81 +1216,229 @@ function ingresoProrateado(camp, desde, hasta){
   return Math.round((Number(camp.total)||0)*(diasSolap/totalDias));
 }
 
-function renderPYL(){
-  const desde=_('pyl-desde').value, hasta=_('pyl-hasta').value;
+// Calcula todos los números del P&L para un período dado
+function calcPYL(desde, hasta) {
+  // Ingresos
+  const ingCamps = CAMPS.filter(c => !desde || !hasta || !(c.fin < desde || c.ini > hasta));
+  const ingresos = ingCamps.reduce((a,c) => a + ingresoProrateado(c, desde, hasta), 0);
 
-  // Ingresos: campañas que solapan el período
-  const ingRows=CAMPS.filter(c=>!desde||!hasta||!(c.fin<desde||c.ini>hasta));
-  const ingTotal=ingRows.reduce((a,c)=>a+ingresoProrateado(c,desde,hasta),0);
+  // Costos por categoría
+  const cosRows = GASTOS.filter(g => inPeriodo(g.fechaPago||g.fecha, desde, hasta));
+  const cosByCategoria = {};
+  cosRows.forEach(g => {
+    const cat = (g.cat||'Otro').trim();
+    cosByCategoria[cat] = (cosByCategoria[cat]||0) + Number(g.neto||0);
+  });
+  const cosTotal = cosRows.reduce((a,g) => a + Number(g.neto||0), 0);
+  const ivaCredito = cosRows.reduce((a,g) => a + g.neto*(g.al/100), 0);
 
-  // Costos: gastos cuya fecha de pago cae en el período
-  const cosRows=GASTOS.filter(g=>inPeriodo(g.fechaPago||g.fecha,desde,hasta));
-  const cosTotal=cosRows.reduce((a,g)=>a+Number(g.neto||0),0);
-  const ivaCredito=cosRows.reduce((a,g)=>a+g.neto*(g.al/100),0);
+  // Depreciación
+  const depMensual = INVS.reduce((a,i) => a + Number(i.dep||0), 0);
+  const meses = desde && hasta
+    ? Math.max(1, Math.round((new Date(hasta) - new Date(desde)) / 86400000 / 30))
+    : 1;
+  const depPeriodo = Math.round(depMensual * meses);
 
-  // Depreciaciones del período
-  const depTotal=INVS.reduce((a,i)=>a+Number(i.dep||0),0);
-  const meses=desde&&hasta?Math.max(1,Math.round((new Date(hasta)-new Date(desde))/86400000/30)):1;
-  const depPeriodo=Math.round(depTotal*meses);
+  // Resultados
+  const utilidadBruta = ingresos - cosTotal;
+  const ebitda = utilidadBruta; // sin financieros ni impuestos
+  const resultado = ingresos - cosTotal - depPeriodo;
+  const margen = ingresos > 0 ? Math.round((resultado / ingresos) * 100) : 0;
 
-  const resultado=ingTotal-cosTotal-depPeriodo;
-  const margen=ingTotal>0?Math.round((resultado/ingTotal)*100):0;
+  return { ingresos, ingCamps, cosRows, cosByCategoria, cosTotal, ivaCredito, depPeriodo, depMensual, utilidadBruta, ebitda, resultado, margen };
+}
 
-  _('pyl-kpis').innerHTML=`
-    <div class="stat"><div class="stat-lbl">Ingresos</div><div class="stat-val" style="color:var(--green)">$${fmt(ingTotal)}</div><div class="stat-sub">${ingRows.length} campaña${ingRows.length!==1?'s':''}</div></div>
-    <div class="stat"><div class="stat-lbl">Costos operativos</div><div class="stat-val" style="color:var(--red)">$${fmt(cosTotal)}</div><div class="stat-sub">+ dep. $${fmt(depPeriodo)}</div></div>
-    <div class="stat"><div class="stat-lbl">Resultado</div><div class="stat-val" style="color:${resultado>=0?'var(--green)':'var(--red)'}">$${fmt(resultado)}</div><div class="stat-sub">${resultado>=0?'utilidad':'pérdida'}</div></div>
-    <div class="stat"><div class="stat-lbl">Margen</div><div class="stat-val" style="color:${margen>=0?'var(--green)':'var(--red)'}">${margen}%</div><div class="stat-sub">sobre ingresos</div></div>
-  `;
+function fmtPYL(n, coloreado = true) {
+  if (!coloreado) return `$${fmt(n)}`;
+  const cls = n > 0 ? 'val-pos' : n < 0 ? 'val-neg' : 'val-neu';
+  return `<span class="${cls}">$${fmt(n)}</span>`;
+}
 
-  _('pyl-ing-body').innerHTML=ingRows.map(c=>{
-    const monto=ingresoProrateado(c,desde,hasta);
-    return`<tr>
-      <td style="font-size:11px;color:var(--text2)">${c.orden||'—'}</td>
-      <td style="font-weight:500">${c.cliente||'—'}</td>
-      <td style="font-size:11px">${fmtD(c.ini)} → ${fmtD(c.fin)}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(monto)}</td>
+function renderPYL() {
+  const desde  = _('pyl-desde').value;
+  const hasta  = _('pyl-hasta').value;
+  const desde2 = _('pyl-desde2').value;
+  const hasta2 = _('pyl-hasta2').value;
+
+  const hasPer1 = desde && hasta;
+  const hasPer2 = desde2 && hasta2;
+
+  const p1 = hasPer1 ? calcPYL(desde, hasta)   : null;
+  const p2 = hasPer2 ? calcPYL(desde2, hasta2) : null;
+
+  // Etiquetas de período
+  const lbl1 = hasPer1 ? `${fmtD(desde)} → ${fmtD(hasta)}` : 'Período 1';
+  const lbl2 = hasPer2 ? `${fmtD(desde2)} → ${fmtD(hasta2)}` : 'Período 2';
+
+  // Encabezado
+  const extraCols = hasPer2
+    ? `<th>${lbl2}</th><th>Variación</th>`
+    : '';
+  _('pyl-thead').innerHTML = `<tr>
+    <th style="min-width:220px">Concepto</th>
+    <th>${lbl1 || '—'}</th>
+    ${extraCols}
+  </tr>`;
+
+  // Función para fila de datos
+  function row(label, v1, v2, isIndented = false, isNegative = false) {
+    const tdClass = isIndented ? 'indent' : '';
+    const sign = isNegative ? -1 : 1;
+    const c1 = v1 !== null ? (isNegative ? `<span class="val-neg">($${fmt(Math.abs(v1))})</span>` : fmtPYL(v1 * sign)) : '<span style="color:var(--text3)">—</span>';
+    let extra = '';
+    if (hasPer2) {
+      const c2 = v2 !== null ? (isNegative ? `<span class="val-neg">($${fmt(Math.abs(v2))})</span>` : fmtPYL(v2 * sign)) : '<span style="color:var(--text3)">—</span>';
+      const varVal = (v1 !== null && v2 !== null) ? (v1 - v2) : null;
+      const varStr = varVal !== null
+        ? `<span class="${varVal >= 0 ? 'val-pos' : 'val-neg'}">${varVal >= 0 ? '+' : ''}$${fmt(varVal)}</span>`
+        : '—';
+      extra = `<td>${c2}</td><td>${varStr}</td>`;
+    }
+    return `<tr>
+      <td class="${tdClass}">${label}</td>
+      <td>${c1}</td>
+      ${extra}
     </tr>`;
-  }).join('')||`<tr><td colspan="4" class="empty">Sin ingresos en el período.</td></tr>`;
-  _('pyl-ing-total').textContent='$'+fmt(ingTotal);
+  }
 
-  _('pyl-cos-body').innerHTML=cosRows.map(g=>`<tr>
-    <td>${(g.cat||'').trim()||'—'}</td>
-    <td style="font-size:11px;color:var(--text2)">${g.desc||'—'}</td>
-    <td>${fmtD(g.fechaPago||g.fecha)}</td>
-    <td style="font-family:'IBM Plex Mono',monospace;color:var(--red)">$${fmt(g.neto)}</td>
-  </tr>`).join('')||`<tr><td colspan="4" class="empty">Sin costos en el período.</td></tr>`;
-  _('pyl-cos-total').textContent='$'+fmt(cosTotal);
+  function sectionRow(label) {
+    const cols = hasPer2 ? '<td></td><td></td>' : '';
+    return `<tr class="section-header"><td colspan="1">${label}</td><td></td>${cols.replace('<td></td><td></td>',cols)}</tr>`;
+  }
 
-  _('pyl-dep').innerHTML=INVS.length
-    ?`${INVS.length} activo${INVS.length>1?'s':''} · $${fmt(depTotal)}/mes · $${fmt(depPeriodo)} en el período · IVA crédito acumulado: $${fmt(ivaCredito)}`
-    :'Sin inversiones registradas.';
+  function subtotalRow(label, v1, v2, colorFn = null) {
+    const c1 = v1 !== null ? (colorFn ? colorFn(v1) : fmtPYL(v1)) : '—';
+    let extra = '';
+    if (hasPer2) {
+      const c2 = v2 !== null ? (colorFn ? colorFn(v2) : fmtPYL(v2)) : '—';
+      const varVal = (v1 !== null && v2 !== null) ? (v1 - v2) : null;
+      const varStr = varVal !== null
+        ? `<span class="${varVal >= 0 ? 'val-pos' : 'val-neg'}">${varVal >= 0 ? '+' : ''}$${fmt(varVal)}</span>`
+        : '—';
+      extra = `<td>${c2}</td><td>${varStr}</td>`;
+    }
+    return `<tr class="subtotal"><td>${label}</td><td>${c1}</td>${extra}</tr>`;
+  }
+
+  function ebitdaRow(label, v1, v2) {
+    const c1 = v1 !== null ? fmtPYL(v1) : '—';
+    let extra = '';
+    if (hasPer2) {
+      const c2 = v2 !== null ? fmtPYL(v2) : '—';
+      const varVal = (v1 !== null && v2 !== null) ? (v1 - v2) : null;
+      const varStr = varVal !== null
+        ? `<span class="${varVal >= 0 ? 'val-pos' : 'val-neg'}">${varVal >= 0 ? '+' : ''}$${fmt(varVal)}</span>`
+        : '—';
+      extra = `<td>${c2}</td><td>${varStr}</td>`;
+    }
+    return `<tr class="ebitda-row"><td>${label}</td><td>${c1}</td>${extra}</tr>`;
+  }
+
+  function totalRow(label, v1, v2) {
+    const c1 = v1 !== null ? fmtPYL(v1) : '—';
+    let extra = '';
+    if (hasPer2) {
+      const c2 = v2 !== null ? fmtPYL(v2) : '—';
+      const varVal = (v1 !== null && v2 !== null) ? (v1 - v2) : null;
+      const varStr = varVal !== null
+        ? `<span class="${varVal >= 0 ? 'val-pos' : 'val-neg'}">${varVal >= 0 ? '+' : ''}$${fmt(varVal)}</span>`
+        : '—';
+      extra = `<td>${c2}</td><td>${varStr}</td>`;
+    }
+    return `<tr class="total-row"><td>${label}</td><td>${c1}</td>${extra}</tr>`;
+  }
+
+  // Recopilar todas las categorías de costos de ambos períodos
+  const allCats = [...new Set([
+    ...Object.keys(p1 ? p1.cosByCategoria : {}),
+    ...Object.keys(p2 ? p2.cosByCategoria : {})
+  ])].sort();
+
+  let html = '';
+
+  // ── INGRESOS ──
+  html += sectionRow('INGRESOS');
+  html += row('Facturación por campañas', p1?.ingresos ?? null, p2?.ingresos ?? null, true);
+  if (p1 && p1.ingCamps.length > 0) {
+    p1.ingCamps.slice(0, 5).forEach(c => {
+      const v1 = ingresoProrateado(c, desde, hasta);
+      const v2 = p2 ? ingresoProrateado(c, desde2, hasta2) : null;
+      html += row(`↳ ${c.cliente||'—'} (${c.orden||'—'})`, v1, v2, true);
+    });
+    if (p1.ingCamps.length > 5) {
+      html += row(`↳ +${p1.ingCamps.length - 5} campañas más...`, null, null, true);
+    }
+  }
+  html += subtotalRow('Total ingresos', p1?.ingresos ?? null, p2?.ingresos ?? null, v => `<span class="val-pos">$${fmt(v)}</span>`);
+
+  // ── COSTOS OPERATIVOS ──
+  html += sectionRow('COSTOS OPERATIVOS');
+  if (allCats.length > 0) {
+    allCats.forEach(cat => {
+      const v1 = p1 ? (p1.cosByCategoria[cat] || 0) : null;
+      const v2 = p2 ? (p2.cosByCategoria[cat] || 0) : null;
+      html += row(cat, v1, v2, true, true);
+    });
+  } else {
+    html += row('Sin gastos registrados', 0, p2 ? 0 : null, true);
+  }
+  html += subtotalRow('Total costos operativos', p1 ? -p1.cosTotal : null, p2 ? -p2.cosTotal : null, v => `<span class="val-neg">($${fmt(Math.abs(v))})</span>`);
+
+  // ── UTILIDAD BRUTA ──
+  html += subtotalRow('UTILIDAD BRUTA', p1?.utilidadBruta ?? null, p2?.utilidadBruta ?? null);
+
+  // Margen
+  if (p1) {
+    const m1 = p1.margen;
+    const m2 = p2 ? p2.margen : null;
+    const margenExtra = hasPer2 && m2 !== null
+      ? `<td><span class="${m2 >= 0 ? 'val-pos' : 'val-neg'}">${m2}%</span></td><td><span class="${m1 - m2 >= 0 ? 'val-pos' : 'val-neg'}">${m1 - m2 >= 0 ? '+' : ''}${m1 - m2}pp</span></td>`
+      : '';
+    html += `<tr><td class="indent" style="font-style:italic;color:var(--text3)">Margen bruto</td><td><span class="${m1 >= 0 ? 'val-pos' : 'val-neg'}">${m1}%</span></td>${margenExtra}</tr>`;
+  }
+
+  // ── EBITDA ──
+  html += ebitdaRow('EBITDA', p1?.ebitda ?? null, p2?.ebitda ?? null);
+
+  // ── DEPRECIACIÓN ──
+  html += sectionRow('DEPRECIACIONES Y AMORTIZACIONES');
+  html += row('Depreciación activos fijos', p1?.depPeriodo ?? null, p2?.depPeriodo ?? null, true, true);
+  if (p1 && INVS.length > 0) {
+    INVS.slice(0, 4).forEach(i => {
+      const dep1 = Number(i.dep) || 0;
+      const dep2 = dep1;
+      html += row(`↳ ${i.sop} — ${i.cat||i.desc||'Activo'}`, dep1, p2 ? dep2 : null, true, true);
+    });
+    if (INVS.length > 4) html += row(`↳ +${INVS.length - 4} activos más...`, null, null, true);
+  }
+  html += subtotalRow('Total depreciaciones', p1 ? -p1.depPeriodo : null, p2 ? -p2.depPeriodo : null, v => `<span class="val-neg">($${fmt(Math.abs(v))})</span>`);
+
+  // ── RESULTADO NETO ──
+  html += totalRow('RESULTADO NETO DEL PERÍODO', p1?.resultado ?? null, p2?.resultado ?? null);
+
+  // IVA nota
+  if (p1) {
+    const cols2 = hasPer2 ? `<td style="color:var(--text3);font-size:11px">$${fmt(p2?.ivaCredito||0)}</td><td></td>` : '';
+    html += `<tr><td class="indent" style="color:var(--text3);font-size:11px;font-style:italic">IVA crédito fiscal del período</td><td style="color:var(--green);font-size:11px">$${fmt(p1.ivaCredito)}</td>${cols2}</tr>`;
+  }
+
+  _('pyl-tbody').innerHTML = html || `<tr><td colspan="4" class="empty">Seleccioná un período para ver el estado de resultados.</td></tr>`;
 }
 
 // ── CASHFLOW ──────────────────────────────────────────────
 function renderCF(){
   const desde=_('cf-desde').value, hasta=_('cf-hasta').value;
-
-  // Movimientos: cobros reales + pagos de gastos en el período
   const movs=[];
-
-  // Ingresos cobrados (cobros con fecha en período)
   COBROS.filter(c=>inPeriodo(c.fecha,desde,hasta)).forEach(c=>{
     movs.push({fecha:toISO(c.fecha),tipo:'Cobro',det:c.cliente+(c.orden?' · '+c.orden:''),
       ingreso:Number(c.monto||0),egreso:0,esFuturo:c.fecha>HOY});
   });
-
-  // Egresos (gastos con fecha de pago en período)
   GASTOS.filter(g=>inPeriodo(g.fechaPago||g.fecha,desde,hasta)).forEach(g=>{
     movs.push({fecha:toISO(g.fechaPago||g.fecha),tipo:'Gasto',
       det:(g.cat||'').trim()+(g.desc?' — '+g.desc:''),
       ingreso:0,egreso:Number(g.neto||0)+(g.neto*(g.al/100)),esFuturo:(g.fechaPago||g.fecha)>HOY});
   });
-
-  // Ordenar por fecha
   movs.sort((a,b)=>a.fecha.localeCompare(b.fecha));
-
-  // Calcular saldo acumulado
   let saldo=0;
   const rows=movs.map(m=>{
     saldo+=m.ingreso-m.egreso;
@@ -1079,13 +1452,11 @@ function renderCF(){
       <td style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:${saldo>=0?'var(--green)':'var(--red)'}">$${fmt(saldo)}</td>
     </tr>`;
   });
-
   const totIngr=movs.reduce((a,m)=>a+m.ingreso,0);
   const totEgr=movs.reduce((a,m)=>a+m.egreso,0);
   const saldoFinal=totIngr-totEgr;
   const cobFuturos=COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
   const pagFuturos=GASTOS.filter(g=>(g.fechaPago||g.fecha)>HOY&&g.est==='Pendiente').reduce((a,g)=>a+Number(g.neto||0),0);
-
   _('cf-kpis').innerHTML=`
     <div class="stat"><div class="stat-lbl">Ingresos cobrados</div><div class="stat-val" style="color:var(--green)">$${fmt(totIngr)}</div></div>
     <div class="stat"><div class="stat-lbl">Egresos pagados</div><div class="stat-val" style="color:var(--red)">$${fmt(totEgr)}</div></div>
@@ -1095,25 +1466,20 @@ function renderCF(){
   _('cf-body').innerHTML=rows.join('')||`<tr><td colspan="6" class="empty">Sin movimientos en el período.</td></tr>`;
 }
 
-// Agregar PYL y CF al go()
-const _go_orig = go;
-
 // ── INIT ──────────────────────────────────────────────────
+// FIX: buildChips, buildCliSelect y renderDash se llaman siempre al inicio
 buildChips();
 buildCliSelect();
-renderDash();
+renderDash();       // renderiza la grilla de soportes desde el array SOPS hardcodeado
 renderDispGrid();
 
-// Auto-sincronizar al abrir si hay URL guardada
 if(URL_GS){
-  // Conectar y sincronizar todo automáticamente
   (async()=>{
     const st=_('cfg-status');
     try{
       await api('ping');
       st.textContent='✓ Conectado';st.style.color='var(--green)';
       document.getElementById('cfg').style.display='none';
-      // Sincronizar en background sin bloquear la UI
       syncOcupacion().then(()=>renderDash());
       syncVentas().then(()=>{renderDash();buildCliSelect();});
       syncGastos().then(()=>{renderIva();});
@@ -1127,56 +1493,5 @@ if(URL_GS){
   document.getElementById('cfg').style.display='flex';
 }
 </script>
-
-<!-- P&L -->
-<div class="page" id="page-pyl">
-  <div class="fbar">
-    <div class="fg"><label>Desde</label><input type="date" id="pyl-desde" oninput="renderPYL()"></div>
-    <div class="fg"><label>Hasta</label><input type="date" id="pyl-hasta" oninput="renderPYL()"></div>
-    <button class="btn btn-sec btn-sm" onclick="setFechasDefecto('pyl')">Mes actual</button>
-    <button class="btn btn-prim btn-sm" onclick="syncAll()">↻ Sincronizar</button>
-  </div>
-  <div class="stats s4" id="pyl-kpis"></div>
-  <div class="divider"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <div>
-      <div class="sec-hdr">Ingresos</div>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Orden</th><th>Cliente</th><th>Período</th><th>Monto</th></tr></thead>
-        <tbody id="pyl-ing-body"></tbody>
-        <tfoot><tr><td colspan="3" style="font-weight:600;padding:8px 12px">Total ingresos</td><td id="pyl-ing-total" style="font-weight:600;padding:8px 12px;font-family:'IBM Plex Mono',monospace"></td></tr></tfoot>
-      </table></div>
-    </div>
-    <div>
-      <div class="sec-hdr">Costos</div>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Categoría</th><th>Descripción</th><th>Fecha</th><th>Monto</th></tr></thead>
-        <tbody id="pyl-cos-body"></tbody>
-        <tfoot><tr><td colspan="3" style="font-weight:600;padding:8px 12px">Total costos</td><td id="pyl-cos-total" style="font-weight:600;padding:8px 12px;font-family:'IBM Plex Mono',monospace"></td></tr></tfoot>
-      </table></div>
-    </div>
-  </div>
-  <div class="divider"></div>
-  <div class="sec-hdr">Depreciaciones del período</div>
-  <div id="pyl-dep" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
-</div>
-
-<!-- CASHFLOW -->
-<div class="page" id="page-cashflow">
-  <div class="fbar">
-    <div class="fg"><label>Desde</label><input type="date" id="cf-desde" oninput="renderCF()"></div>
-    <div class="fg"><label>Hasta</label><input type="date" id="cf-hasta" oninput="renderCF()"></div>
-    <button class="btn btn-sec btn-sm" onclick="setFechasDefecto('cf')">Mes actual</button>
-    <button class="btn btn-prim btn-sm" onclick="syncAll()">↻ Sincronizar</button>
-  </div>
-  <div class="stats s4" id="cf-kpis"></div>
-  <div class="divider"></div>
-  <div class="sec-hdr">Movimientos ordenados por fecha</div>
-  <div class="tbl-wrap"><table>
-    <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Ingreso</th><th>Egreso</th><th>Saldo acum.</th></tr></thead>
-    <tbody id="cf-body"></tbody>
-  </table></div>
-</div>
-
 </body>
 </html>
