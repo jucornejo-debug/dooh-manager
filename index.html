@@ -481,8 +481,28 @@ let SOPS=[
   {id:'T8-P1',loc:'UCASAL',cap:2880},{id:'T8-P2',loc:'UCASAL',cap:2880},
 ];
 
-function load(k,d=[]){try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}}
-function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function load(k, d=[]) {
+  try {
+    const val = localStorage.getItem(k);
+    if (!val) return d;
+    
+    const parsed = JSON.parse(val);
+    
+    // Acá está el blindaje: si el sistema espera una lista (array) 
+    // pero la memoria le devuelve otra cosa, lo descarta para no crashear.
+    if (Array.isArray(d) && !Array.isArray(parsed)) {
+      localStorage.removeItem(k);
+      return d;
+    }
+    
+    return parsed || d;
+  } catch(e) {
+    // Si el JSON está roto, limpia ese dato tóxico automáticamente
+    console.warn(`Memoria corrupta en ${k}, limpiando...`);
+    localStorage.removeItem(k); 
+    return d;
+  }
+}
 
 let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load(LS.inv);
 
