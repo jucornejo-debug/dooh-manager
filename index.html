@@ -208,7 +208,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <div id="ven-loading" class="loading-row" style="display:none"><span class="spin"></span>Cargando...</div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Orden</th><th>Cliente</th><th>Soportes</th><th>Período</th><th>Total</th><th>Factura</th><th>Estado cobro</th><th>Estado</th></tr></thead>
+      <thead><tr><th>Orden</th><th>Cliente</th><th>Soportes</th><th>Período</th><th>Total</th><th>Factura</th><th>Estado cobro</th><th>Fecha est. pago</th><th>Estado</th></tr></thead>
       <tbody id="ven-tbody"></tbody>
     </table>
   </div>
@@ -231,6 +231,12 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       <div class="field"><label>N° Factura (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
       <div class="field"><label>Estado cobro</label>
         <select id="nv-cobest"><option>Pendiente</option><option>Parcialmente cobrado</option><option>Cobrado</option></select>
+      </div>
+      <!-- NUEVO: Fecha estimativa de pago -->
+      <div class="field">
+        <label>Fecha estimativa de pago</label>
+        <input type="date" id="nv-fechapago">
+        <div class="hint">Usada para proyectar ingresos en Cashflow y Cobranzas.</div>
       </div>
       <div class="field full"><label>Soportes — seleccioná uno o más</label>
         <div class="chips" id="nv-chips"></div>
@@ -562,10 +568,39 @@ let SOPS=[
 const _=id=>document.getElementById(id);
 const fmt=n=>Math.round(n||0).toLocaleString('es-AR');
 function numAR(v){
+  // FIX: parsea números en formato argentino correctamente
+  // 100.000 → 100000 | 100.000,50 → 100000.50 | 1500 → 1500 | 1500,50 → 1500.50
   if(v === null || v === undefined || v === '') return 0;
   let s = String(v).replace(/\$/g,'').replace(/\s/g,'').trim();
-  if(s.includes(',') && s.includes('.')) s = s.replace(/\./g,'').replace(',','.');
-  else if(s.includes(',')) s = s.replace(',','.');
+  if(!s) return 0;
+
+  const hasDot = s.includes('.');
+  const hasComma = s.includes(',');
+
+  if(hasDot && hasComma){
+    // Tiene ambos: el que aparece primero es el separador de miles
+    const dotPos = s.indexOf('.');
+    const commaPos = s.indexOf(',');
+    if(dotPos < commaPos){
+      // 100.000,50 → separador de miles=punto, decimal=coma
+      s = s.replace(/\./g,'').replace(',','.');
+    } else {
+      // 100,000.50 → separador de miles=coma, decimal=punto
+      s = s.replace(/,/g,'');
+    }
+  } else if(hasDot){
+    // Solo punto: podría ser miles (100.000) o decimal (1500.50)
+    const parts = s.split('.');
+    if(parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1){
+      // Patrón X.XXX → separador de miles (ej: 100.000)
+      s = s.replace(/\./g,'');
+    }
+    // Si no cumple el patrón (ej: 1500.50) lo dejamos como está (decimal inglés)
+  } else if(hasComma){
+    // Solo coma: separador decimal argentino (1500,50)
+    s = s.replace(',','.');
+  }
+
   const n = Number(s);
   return isNaN(n) ? 0 : n;
 }
@@ -620,14 +655,8 @@ let OCUP_HOY = {};
 function numSheet(v){
   if(v === null || v === undefined || v === '') return 0;
   if(typeof v === 'number') return v;
-  let s = String(v).trim();
-  if(!s) return 0;
-  s = s.replace(/\s/g,'').replace(/\$/g,'').replace(/%/g,'');
-  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g,'').replace(',','.');
-  else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g,'');
-  else s = s.replace(',','.');
-  const n = Number(s);
-  return isNaN(n) ? 0 : n;
+  // Reusar numAR para consistencia
+  return numAR(v);
 }
 
 function valOcup(row, keys){
@@ -696,7 +725,6 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
         label: 'hoy desde Sheet'
       };
     }
-    // Fallback sin Sheets: calcular desde campañas locales para hoy
     desde = HOY;
     hasta = HOY;
   }
@@ -792,11 +820,15 @@ function sopCardHTML(s, ocp, extra) {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
-// FIX: siempre renderiza la grilla de soportes, incluso sin datos de Sheets
 function renderDash(){
   const desde=_('dd-desde').value, hasta=_('dd-hasta').value, filtE=_('dd-est').value;
-  const cobrado=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
-  const totalFact=CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
+
+  // FIX: Facturado = Pendiente + Cobrado (total de campañas)
+  // Cobrado = cobros con fecha <= hoy
+  // Pendiente = diferencia entre total facturado y lo cobrado real
+  const totalFact = CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
+  const cobrado   = COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  const pendiente = Math.max(0, totalFact - cobrado);
 
   let totP=0, libres=0, sinDisp=0;
   SOPS.forEach(s=>{
@@ -809,11 +841,17 @@ function renderDash(){
   _('ds-kpis').innerHTML=`
     <div class="stat"><div class="stat-lbl">Ocupación pico${desde&&hasta?' — período':' — hoy'}</div><div class="stat-val">${Math.round(totP/SOPS.length)}%</div><div class="stat-sub">${desde&&hasta?fmtD(desde)+' → '+fmtD(hasta):'día actual'}</div></div>
     <div class="stat"><div class="stat-lbl">Soportes disponibles</div><div class="stat-val">${libres}</div><div class="stat-sub">de ${SOPS.length} caras totales</div></div>
-    <div class="stat"><div class="stat-lbl">Cobrado</div><div class="stat-val" style="color:var(--green)">$${fmt(cobrado)}</div><div class="stat-sub">efectivizado</div></div>
-    <div class="stat"><div class="stat-lbl">Por cobrar</div><div class="stat-val" style="color:var(--orange)">$${fmt(Math.max(0,totalFact-cobrado))}</div><div class="stat-sub">pendiente</div></div>
+    <div class="stat">
+      <div class="stat-lbl">Facturado</div>
+      <div class="stat-val">$${fmt(totalFact)}</div>
+      <div class="stat-sub" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:5px">
+        <span style="color:var(--green)">✓ $${fmt(cobrado)} cobrado</span>
+        <span style="color:var(--orange)">⏳ $${fmt(pendiente)} pendiente</span>
+      </div>
+    </div>
+    <div class="stat"><div class="stat-lbl">Soportes sin disponibilidad</div><div class="stat-val" style="color:var(--red)">${sinDisp}</div><div class="stat-sub">ocupación ≥ 90%</div></div>
   `;
 
-  // Siempre mostrar todos los soportes, incluso si pct=0
   let lista=SOPS.map(s=>{
     const oc=ocupacionSoporte(s.id,desde||null,hasta||null);
     return{s, ocp:oc.pico, p:oc.pct, est:estOcup(oc.pct), extra:oc};
@@ -912,6 +950,7 @@ async function syncVentas(){
           factura: row['N° de Factura'],
           cobro: row['Estado Facturación'] || '',
           estado: row['Estado'] || '',
+          fechaPagoEst: toISO(row['Fecha Est. Pago'] || row['Fecha Estimativa Pago'] || ''),
           soportes: []
         };
       }
@@ -942,8 +981,11 @@ function renderVentas(){
     <td style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.total)}</td>
     <td style="font-size:11px">${c.factura||'—'}</td>
     <td><span class="bdg ${c.cobro==='Cobrado'?'bdg-ok':c.cobro==='Pendiente'?'bdg-w':'bdg-blu'}">${c.cobro||'—'}</span></td>
+    <td style="font-size:11px;color:${c.fechaPagoEst && c.fechaPagoEst < HOY && c.cobro !== 'Cobrado' ? 'var(--red)' : 'var(--text2)'}">
+      ${c.fechaPagoEst ? fmtD(c.fechaPagoEst) : '—'}
+    </td>
     <td><span class="bdg ${c.estado==='ACTIVO'?'bdg-ok':c.estado==='INACTIVO'?'bdg-neu':'bdg-w'}">${c.estado||'—'}</span></td>
-  </tr>`).join('')||`<tr><td colspan="8" class="empty">Sin campañas. Hacé clic en ↻ Sincronizar.</td></tr>`;
+  </tr>`).join('')||`<tr><td colspan="9" class="empty">Sin campañas. Hacé clic en ↻ Sincronizar.</td></tr>`;
 }
 
 // ── NUEVA VENTA ───────────────────────────────────────────
@@ -1008,21 +1050,23 @@ async function guardarVenta(){
   if(!cli || !selSops.length || !ini || !fin || !pases){ alert('Completá: cliente, al menos un soporte, fechas y pases.'); return; }
   const totalCampania = parseFloat(_('nv-total').value) || 0;
   const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
+  const fechaPagoEst = _('nv-fechapago').value || '';
   const payload = {
     orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
     cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases,
-    totalFacturado: totalPorSoporte, nroFactura: _('nv-fac').value.trim()
+    totalFacturado: totalPorSoporte, nroFactura: _('nv-fac').value.trim(),
+    fechaEstimativaPago: fechaPagoEst  // se envía a la Sheet como campo extra
   };
   _('nv-load').style.display='block';
   try{
     if(URL_GS) await api('saveVenta', payload);
-    CAMPS.push({...payload, ini:toISO(ini), fin:toISO(fin), total:totalCampania, factura:payload.nroFactura, cobro:_('nv-cobest').value, estado:'ACTIVO'});
+    CAMPS.push({...payload, ini:toISO(ini), fin:toISO(fin), total:totalCampania, factura:payload.nroFactura, cobro:_('nv-cobest').value, estado:'ACTIVO', fechaPagoEst});
     save(LS.camps, CAMPS);
     flash('nv-ok');resetNV();renderDash();buildCliSelect();
   }catch(e){flashErr('nv-err', e.message);}
   finally{_('nv-load').style.display='none';}
 }
-function resetNV(){selSops=[];buildChips();['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs'].forEach(id=>_(id).value='');_('nv-avail').style.display='none';}
+function resetNV(){selSops=[];buildChips();['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs','nv-fechapago'].forEach(id=>_(id).value='');_('nv-avail').style.display='none';}
 
 // ── COBRANZAS ─────────────────────────────────────────────
 let cobTab='pend';
@@ -1048,14 +1092,21 @@ async function guardarCobro(){
 }
 function resetCobro(){['nc-fecha','nc-monto','nc-fac','nc-obs','nc-iva-c'].forEach(id=>_(id).value='');_('nc-cli').value='';_('nc-iva').value='0';}
 function renderCob(){
-  const totalFact=CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
-  const cobHoy=COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
-  const cobFut=COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  // FIX: Facturado = Cobrado + Pendiente (total campañas)
+  const totalFact = CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
+  const cobHoy    = COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  const cobFut    = COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
+  const sinProgramar = Math.max(0, totalFact - cobHoy - cobFut);
+
   _('cob-kpis').innerHTML=`
-    <div class="stat"><div class="stat-lbl">Total facturado</div><div class="stat-val">$${fmt(totalFact)}</div></div>
-    <div class="stat"><div class="stat-lbl">Cobrado</div><div class="stat-val" style="color:var(--green)">$${fmt(cobHoy)}</div></div>
-    <div class="stat"><div class="stat-lbl">Programado</div><div class="stat-val" style="color:var(--blue)">$${fmt(cobFut)}</div><div class="stat-sub">cobros futuros</div></div>
-    <div class="stat"><div class="stat-lbl">Sin programar</div><div class="stat-val" style="color:var(--orange)">$${fmt(Math.max(0,totalFact-cobHoy-cobFut))}</div></div>
+    <div class="stat">
+      <div class="stat-lbl">Facturado total</div>
+      <div class="stat-val">$${fmt(totalFact)}</div>
+      <div class="stat-sub">Cobrado + Pendiente</div>
+    </div>
+    <div class="stat"><div class="stat-lbl">Cobrado</div><div class="stat-val" style="color:var(--green)">$${fmt(cobHoy)}</div><div class="stat-sub">${Math.round(totalFact>0?(cobHoy/totalFact)*100:0)}% del total</div></div>
+    <div class="stat"><div class="stat-lbl">Programado</div><div class="stat-val" style="color:var(--blue)">$${fmt(cobFut)}</div><div class="stat-sub">cobros futuros registrados</div></div>
+    <div class="stat"><div class="stat-lbl">Sin programar</div><div class="stat-val" style="color:var(--orange)">$${fmt(sinProgramar)}</div><div class="stat-sub">pendiente sin fecha</div></div>
   `;
   const clis=[...new Set(CAMPS.map(c=>c.cliente).filter(Boolean))];
   let html='';
@@ -1067,12 +1118,20 @@ function renderCob(){
     const cobF=cobrosCli.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
     const pend=Math.max(0,tot-cobReal);
     const pct=tot>0?Math.round((cobReal/tot)*100):0;
+    // Fecha est. pago de campañas pendientes
+    const fechasEst = campsCli
+      .filter(c=>c.fechaPagoEst && c.cobro !== 'Cobrado')
+      .map(c=>c.fechaPagoEst).sort();
     if(cobTab==='ok'&&pend>0) return;
     if(cobTab==='pend'&&cobReal>=tot&&tot>0) return;
     if(cobTab==='prog'&&cobF===0) return;
     html+=`<div class="cob-card">
       <div class="cob-top">
-        <div><div style="font-weight:600;font-size:13px">${cli}</div><div style="font-size:10.5px;color:var(--text2);margin-top:2px">${campsCli.length} campaña${campsCli.length>1?'s':''} · ${pct}% cobrado</div></div>
+        <div>
+          <div style="font-weight:600;font-size:13px">${cli}</div>
+          <div style="font-size:10.5px;color:var(--text2);margin-top:2px">${campsCli.length} campaña${campsCli.length>1?'s':''} · ${pct}% cobrado</div>
+          ${fechasEst.length ? `<div style="font-size:10px;color:var(--blue);margin-top:3px">📅 Pago est.: ${fmtD(fechasEst[0])}</div>` : ''}
+        </div>
         <div style="text-align:right"><div style="font-weight:600">$${fmt(tot)}</div><div style="font-size:10.5px;color:${pend===0?'var(--green)':cobF>=pend?'var(--blue)':'var(--orange)'};margin-top:2px">${pend===0?'✓ Cobrado':cobF>=pend?'✓ Programado':'$'+fmt(pend)+' pendiente'}</div></div>
       </div>
       <div class="cob-prog"><div class="cob-prog-fill" style="width:${pct}%"></div></div>
@@ -1103,7 +1162,7 @@ async function syncGastos(){
   if(!URL_GS) return;
   try{
     const r=await api('getCostos');
-    GASTOS=r.data.map(g=>({id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',neto:Number(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||''}));
+    GASTOS=r.data.map(g=>({id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',neto:numAR(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||''}));
     save(LS.gastos,GASTOS);renderGastos();renderIva();
   }catch(e){alert('Error gastos: '+e.message);}
 }
@@ -1145,7 +1204,7 @@ async function syncInversiones(){
   if(!URL_GS) return;
   try{
     const r=await api('getInversiones');
-    INVS=r.data.map(i=>({id:i['ID Inversión'],fecha:i['Fecha Adquisición'],sop:i['ID Soporte'],cat:i['Categoría'],desc:i['Descripción'],prov:i['Proveedor'],monto:Number(i['Monto Inversión'])||0,iva:Number(i['IVA A FAVOR'])||0,vida:Number(i['Vida Útil (meses)'])||60,resid:Number(i['Valor Residual'])||0,dep:Number(i['Depreciación Mensual'])||0,estado:i['Estado']||'Activo'}));
+    INVS=r.data.map(i=>({id:i['ID Inversión'],fecha:i['Fecha Adquisición'],sop:i['ID Soporte'],cat:i['Categoría'],desc:i['Descripción'],prov:i['Proveedor'],monto:numAR(i['Monto Inversión'])||0,iva:numAR(i['IVA A FAVOR'])||0,vida:Number(i['Vida Útil (meses)'])||60,resid:numAR(i['Valor Residual'])||0,dep:numAR(i['Depreciación Mensual'])||0,estado:i['Estado']||'Activo'}));
     save(LS.inv,INVS);renderInvLista();renderIva();
   }catch(e){alert('Error inversiones: '+e.message);}
 }
@@ -1182,7 +1241,6 @@ function setFechasDefecto(prefix){
   const now=new Date();
   const ini=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
   const fin=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
-  // P&L: período 1 = mes actual, período 2 = mes anterior
   if(prefix==='pyl'){
     _(prefix+'-desde').value=ini;
     _(prefix+'-hasta').value=fin;
@@ -1216,13 +1274,9 @@ function ingresoProrateado(camp, desde, hasta){
   return Math.round((Number(camp.total)||0)*(diasSolap/totalDias));
 }
 
-// Calcula todos los números del P&L para un período dado
 function calcPYL(desde, hasta) {
-  // Ingresos
   const ingCamps = CAMPS.filter(c => !desde || !hasta || !(c.fin < desde || c.ini > hasta));
   const ingresos = ingCamps.reduce((a,c) => a + ingresoProrateado(c, desde, hasta), 0);
-
-  // Costos por categoría
   const cosRows = GASTOS.filter(g => inPeriodo(g.fechaPago||g.fecha, desde, hasta));
   const cosByCategoria = {};
   cosRows.forEach(g => {
@@ -1231,20 +1285,15 @@ function calcPYL(desde, hasta) {
   });
   const cosTotal = cosRows.reduce((a,g) => a + Number(g.neto||0), 0);
   const ivaCredito = cosRows.reduce((a,g) => a + g.neto*(g.al/100), 0);
-
-  // Depreciación
   const depMensual = INVS.reduce((a,i) => a + Number(i.dep||0), 0);
   const meses = desde && hasta
     ? Math.max(1, Math.round((new Date(hasta) - new Date(desde)) / 86400000 / 30))
     : 1;
   const depPeriodo = Math.round(depMensual * meses);
-
-  // Resultados
   const utilidadBruta = ingresos - cosTotal;
-  const ebitda = utilidadBruta; // sin financieros ni impuestos
+  const ebitda = utilidadBruta;
   const resultado = ingresos - cosTotal - depPeriodo;
   const margen = ingresos > 0 ? Math.round((resultado / ingresos) * 100) : 0;
-
   return { ingresos, ingCamps, cosRows, cosByCategoria, cosTotal, ivaCredito, depPeriodo, depMensual, utilidadBruta, ebitda, resultado, margen };
 }
 
@@ -1266,11 +1315,9 @@ function renderPYL() {
   const p1 = hasPer1 ? calcPYL(desde, hasta)   : null;
   const p2 = hasPer2 ? calcPYL(desde2, hasta2) : null;
 
-  // Etiquetas de período
   const lbl1 = hasPer1 ? `${fmtD(desde)} → ${fmtD(hasta)}` : 'Período 1';
   const lbl2 = hasPer2 ? `${fmtD(desde2)} → ${fmtD(hasta2)}` : 'Período 2';
 
-  // Encabezado
   const extraCols = hasPer2
     ? `<th>${lbl2}</th><th>Variación</th>`
     : '';
@@ -1280,7 +1327,6 @@ function renderPYL() {
     ${extraCols}
   </tr>`;
 
-  // Función para fila de datos
   function row(label, v1, v2, isIndented = false, isNegative = false) {
     const tdClass = isIndented ? 'indent' : '';
     const sign = isNegative ? -1 : 1;
@@ -1294,11 +1340,7 @@ function renderPYL() {
         : '—';
       extra = `<td>${c2}</td><td>${varStr}</td>`;
     }
-    return `<tr>
-      <td class="${tdClass}">${label}</td>
-      <td>${c1}</td>
-      ${extra}
-    </tr>`;
+    return `<tr><td class="${tdClass}">${label}</td><td>${c1}</td>${extra}</tr>`;
   }
 
   function sectionRow(label) {
@@ -1348,7 +1390,6 @@ function renderPYL() {
     return `<tr class="total-row"><td>${label}</td><td>${c1}</td>${extra}</tr>`;
   }
 
-  // Recopilar todas las categorías de costos de ambos períodos
   const allCats = [...new Set([
     ...Object.keys(p1 ? p1.cosByCategoria : {}),
     ...Object.keys(p2 ? p2.cosByCategoria : {})
@@ -1356,7 +1397,6 @@ function renderPYL() {
 
   let html = '';
 
-  // ── INGRESOS ──
   html += sectionRow('INGRESOS');
   html += row('Facturación por campañas', p1?.ingresos ?? null, p2?.ingresos ?? null, true);
   if (p1 && p1.ingCamps.length > 0) {
@@ -1371,7 +1411,6 @@ function renderPYL() {
   }
   html += subtotalRow('Total ingresos', p1?.ingresos ?? null, p2?.ingresos ?? null, v => `<span class="val-pos">$${fmt(v)}</span>`);
 
-  // ── COSTOS OPERATIVOS ──
   html += sectionRow('COSTOS OPERATIVOS');
   if (allCats.length > 0) {
     allCats.forEach(cat => {
@@ -1384,10 +1423,8 @@ function renderPYL() {
   }
   html += subtotalRow('Total costos operativos', p1 ? -p1.cosTotal : null, p2 ? -p2.cosTotal : null, v => `<span class="val-neg">($${fmt(Math.abs(v))})</span>`);
 
-  // ── UTILIDAD BRUTA ──
   html += subtotalRow('UTILIDAD BRUTA', p1?.utilidadBruta ?? null, p2?.utilidadBruta ?? null);
 
-  // Margen
   if (p1) {
     const m1 = p1.margen;
     const m2 = p2 ? p2.margen : null;
@@ -1397,10 +1434,8 @@ function renderPYL() {
     html += `<tr><td class="indent" style="font-style:italic;color:var(--text3)">Margen bruto</td><td><span class="${m1 >= 0 ? 'val-pos' : 'val-neg'}">${m1}%</span></td>${margenExtra}</tr>`;
   }
 
-  // ── EBITDA ──
   html += ebitdaRow('EBITDA', p1?.ebitda ?? null, p2?.ebitda ?? null);
 
-  // ── DEPRECIACIÓN ──
   html += sectionRow('DEPRECIACIONES Y AMORTIZACIONES');
   html += row('Depreciación activos fijos', p1?.depPeriodo ?? null, p2?.depPeriodo ?? null, true, true);
   if (p1 && INVS.length > 0) {
@@ -1413,10 +1448,8 @@ function renderPYL() {
   }
   html += subtotalRow('Total depreciaciones', p1 ? -p1.depPeriodo : null, p2 ? -p2.depPeriodo : null, v => `<span class="val-neg">($${fmt(Math.abs(v))})</span>`);
 
-  // ── RESULTADO NETO ──
   html += totalRow('RESULTADO NETO DEL PERÍODO', p1?.resultado ?? null, p2?.resultado ?? null);
 
-  // IVA nota
   if (p1) {
     const cols2 = hasPer2 ? `<td style="color:var(--text3);font-size:11px">$${fmt(p2?.ivaCredito||0)}</td><td></td>` : '';
     html += `<tr><td class="indent" style="color:var(--text3);font-size:11px;font-style:italic">IVA crédito fiscal del período</td><td style="color:var(--green);font-size:11px">$${fmt(p1.ivaCredito)}</td>${cols2}</tr>`;
@@ -1433,6 +1466,15 @@ function renderCF(){
     movs.push({fecha:toISO(c.fecha),tipo:'Cobro',det:c.cliente+(c.orden?' · '+c.orden:''),
       ingreso:Number(c.monto||0),egreso:0,esFuturo:c.fecha>HOY});
   });
+  // También incluir ventas con fecha estimativa de pago como ingresos proyectados
+  CAMPS.filter(c=>c.fechaPagoEst && inPeriodo(c.fechaPagoEst, desde, hasta) && c.cobro !== 'Cobrado').forEach(c=>{
+    // Solo si no hay cobro registrado para esta orden
+    const yaRegistrado = COBROS.some(cb=>cb.orden===c.orden && cb.fecha<=HOY);
+    if(!yaRegistrado){
+      movs.push({fecha:toISO(c.fechaPagoEst),tipo:'Cobro est.',det:c.cliente+' ('+c.orden+') — proyectado',
+        ingreso:Number(c.total||0),egreso:0,esFuturo:true,esProyeccion:true});
+    }
+  });
   GASTOS.filter(g=>inPeriodo(g.fechaPago||g.fecha,desde,hasta)).forEach(g=>{
     movs.push({fecha:toISO(g.fechaPago||g.fecha),tipo:'Gasto',
       det:(g.cat||'').trim()+(g.desc?' — '+g.desc:''),
@@ -1443,17 +1485,19 @@ function renderCF(){
   const rows=movs.map(m=>{
     saldo+=m.ingreso-m.egreso;
     const fut=m.esFuturo;
+    const esProy=m.esProyeccion;
     return`<tr style="${fut?'opacity:.6':''}">
       <td style="font-size:11px;color:${fut?'var(--blue)':'inherit'}">${fmtD(m.fecha)}${fut?' ↗':''}</td>
-      <td><span class="bdg ${m.tipo==='Cobro'?'bdg-ok':'bdg-err'}">${m.tipo}</span></td>
+      <td><span class="bdg ${m.tipo==='Cobro'?'bdg-ok':m.tipo==='Cobro est.'?'bdg-blu':'bdg-err'}">${m.tipo}</span></td>
       <td style="font-size:11.5px">${m.det}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">${m.ingreso>0?'$'+fmt(m.ingreso):''}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:${esProy?'var(--blue)':'var(--green)'}">${m.ingreso>0?'$'+fmt(m.ingreso):''}</td>
       <td style="font-family:'IBM Plex Mono',monospace;color:var(--red)">${m.egreso>0?'$'+fmt(m.egreso):''}</td>
       <td style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:${saldo>=0?'var(--green)':'var(--red)'}">$${fmt(saldo)}</td>
     </tr>`;
   });
-  const totIngr=movs.reduce((a,m)=>a+m.ingreso,0);
+  const totIngr=movs.filter(m=>!m.esProyeccion).reduce((a,m)=>a+m.ingreso,0);
   const totEgr=movs.reduce((a,m)=>a+m.egreso,0);
+  const totProy=movs.filter(m=>m.esProyeccion).reduce((a,m)=>a+m.ingreso,0);
   const saldoFinal=totIngr-totEgr;
   const cobFuturos=COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
   const pagFuturos=GASTOS.filter(g=>(g.fechaPago||g.fecha)>HOY&&g.est==='Pendiente').reduce((a,g)=>a+Number(g.neto||0),0);
@@ -1461,16 +1505,15 @@ function renderCF(){
     <div class="stat"><div class="stat-lbl">Ingresos cobrados</div><div class="stat-val" style="color:var(--green)">$${fmt(totIngr)}</div></div>
     <div class="stat"><div class="stat-lbl">Egresos pagados</div><div class="stat-val" style="color:var(--red)">$${fmt(totEgr)}</div></div>
     <div class="stat"><div class="stat-lbl">Saldo del período</div><div class="stat-val" style="color:${saldoFinal>=0?'var(--green)':'var(--red)'}">$${fmt(saldoFinal)}</div></div>
-    <div class="stat"><div class="stat-lbl">Flujo futuro neto</div><div class="stat-val" style="color:var(--blue)">$${fmt(cobFuturos-pagFuturos)}</div><div class="stat-sub">cobros − pagos programados</div></div>
+    <div class="stat"><div class="stat-lbl">Proyectado pendiente</div><div class="stat-val" style="color:var(--blue)">$${fmt(cobFuturos+totProy-pagFuturos)}</div><div class="stat-sub">cobros prog. + est. − pagos</div></div>
   `;
   _('cf-body').innerHTML=rows.join('')||`<tr><td colspan="6" class="empty">Sin movimientos en el período.</td></tr>`;
 }
 
 // ── INIT ──────────────────────────────────────────────────
-// FIX: buildChips, buildCliSelect y renderDash se llaman siempre al inicio
 buildChips();
 buildCliSelect();
-renderDash();       // renderiza la grilla de soportes desde el array SOPS hardcodeado
+renderDash();
 renderDispGrid();
 
 if(URL_GS){
