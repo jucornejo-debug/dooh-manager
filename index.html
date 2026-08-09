@@ -318,23 +318,27 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
             <option>Caja chica</option><option>Impuestos</option><option>Otro</option>
           </select>
         </div>
-        <div class="field"><label>Soporte (si aplica)</label>
-          <select id="cg-sop">
-            <option value="">General / sin soporte</option>
-            <option>T1-P1</option><option>T2-P1</option><option>T2-P2</option>
-            <option>T3-P1</option><option>T3-P2</option><option>T4-P1</option><option>T4-P2</option>
-            <option>T5-P1</option><option>T5-P2</option><option>T6-P1</option><option>T6-P2</option>
-            <option>T7-P1</option><option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
-          </select>
+        <div class="field full"><label>Soportes (si aplica) — seleccioná uno o más</label>
+          <div class="chips" id="cg-chips"></div>
+          <div class="hint">Si dejás esto vacío, el gasto se registra como general (sin soporte). Si elegís varios, el monto total se divide en partes iguales entre los soportes seleccionados y se genera un registro por cada uno.</div>
         </div>
         <div class="field"><label>Descripción</label><input type="text" id="cg-desc" placeholder="Ej: Reparación pantalla LED T3-P2"></div>
-        <div class="field"><label>Monto neto ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
+        <div class="field"><label>Monto total neto ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
         <div class="field"><label>IVA</label>
           <select id="cg-iva" onchange="calcIvaGasto()">
             <option value="0">Sin IVA</option><option value="21">21%</option><option value="10.5">10.5%</option>
           </select>
         </div>
         <div class="field"><label>IVA crédito fiscal ($)</label><input type="text" id="cg-iva-c" readonly></div>
+        <div class="field"><label>Percepciones ($)</label><input type="number" id="cg-percep" placeholder="0"></div>
+        <div class="field"><label>Facturado</label>
+          <select id="cg-facturado" onchange="toggleFacturado()">
+            <option value="No">No</option>
+            <option value="Si">Sí</option>
+          </select>
+        </div>
+        <div class="field" id="cg-fact-wrap-nro" style="display:none"><label>N° de Factura</label><input type="text" id="cg-nrofactura" placeholder="A-0001-00000123"></div>
+        <div class="field" id="cg-fact-wrap-razon" style="display:none"><label>Razón Social</label><input type="text" id="cg-razonsocial" placeholder="Nombre / Razón social del proveedor"></div>
         <div class="field"><label>Estado de pago</label>
           <select id="cg-est"><option>Pagado</option><option>Pendiente</option></select>
         </div>
@@ -363,10 +367,10 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       </div>
       <button class="btn btn-prim btn-sm" onclick="syncGastos()">↻ Sincronizar</button>
     </div>
-    <div class="stats s3" id="cos-kpis"></div>
+    <div class="stats s4" id="cos-kpis"></div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>ID</th><th>Fecha</th><th>Categoría</th><th>Soporte</th><th>Descripción</th><th>Neto</th><th>IVA</th><th>Total</th><th>Estado</th><th>Vto/Pago</th></tr></thead>
+        <thead><tr><th>ID</th><th>Fecha</th><th>Categoría</th><th>Soporte</th><th>Descripción</th><th>Neto</th><th>IVA</th><th>Percep.</th><th>Total</th><th>Facturado</th><th>Estado</th><th>Vto/Pago</th></tr></thead>
         <tbody id="cos-tbody"></tbody>
       </table>
     </div>
@@ -1145,24 +1149,81 @@ function irACobro(cli){buildCliSelect();_('nc-cli').value=cli;fillOrdenesCobro()
 
 // ── COSTOS ────────────────────────────────────────────────
 let cosTab='form';
+let selSopsGasto=[];
 function setCosTab(t,el){cosTab=t;document.querySelectorAll('#page-costos .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');_('cos-form').style.display=t==='form'?'block':'none';_('cos-lista').style.display=t==='lista'?'block':'none';if(t==='lista') renderGastos();}
+function buildChipsGasto(){
+  selSopsGasto=[];
+  _('cg-chips').innerHTML=SOPS.map(s=>`<button class="chip" id="cgch-${s.id}" type="button" onclick="toggleChipGasto('${s.id}')"><span class="chip-id">${s.id}</span><span class="chip-loc">${s.loc}</span></button>`).join('');
+}
+function toggleChipGasto(id){
+  const i=selSopsGasto.indexOf(id);if(i>-1) selSopsGasto.splice(i,1);else selSopsGasto.push(id);
+  SOPS.forEach(s=>{const el=_('cgch-'+s.id);if(el) el.className='chip'+(selSopsGasto.includes(s.id)?' on':'');});
+}
+function toggleFacturado(){
+  const si=_('cg-facturado').value==='Si';
+  _('cg-fact-wrap-nro').style.display=si?'':'none';
+  _('cg-fact-wrap-razon').style.display=si?'':'none';
+  if(!si){_('cg-nrofactura').value='';_('cg-razonsocial').value='';}
+}
 function calcIvaGasto(){const m=parseFloat(_('cg-neto').value)||0,a=parseFloat(_('cg-iva').value)||0;_('cg-iva-c').value=a?'$'+fmt(m*(a/100)):'$0';}
 async function guardarGasto(){
-  const fecha=_('cg-fecha').value,neto=parseFloat(_('cg-neto').value)||0;
-  if(!fecha||!neto){alert('Ingresá fecha y monto.');return;}
+  const fecha=_('cg-fecha').value,netoTotal=parseFloat(_('cg-neto').value)||0;
+  if(!fecha||!netoTotal){alert('Ingresá fecha y monto.');return;}
   const al=parseFloat(_('cg-iva').value)||0;
-  const g={id:'G-'+(GASTOS.length+1).toString().padStart(3,'0'),fecha,fechaPago:_('cg-fpago').value||fecha,cat:_('cg-cat').value,sop:_('cg-sop').value,desc:_('cg-desc').value,neto,al,est:_('cg-est').value,pago:_('cg-pago').value};
+  const percepTotal=parseFloat(_('cg-percep').value)||0;
+  const facturado=_('cg-facturado').value;
+  const nroFactura=facturado==='Si'?_('cg-nrofactura').value.trim():'';
+  const razonSocial=facturado==='Si'?_('cg-razonsocial').value.trim():'';
+  if(facturado==='Si'&&(!nroFactura||!razonSocial)){alert('Si el gasto está facturado, completá N° de Factura y Razón Social.');return;}
+  const cat=_('cg-cat').value,desc=_('cg-desc').value,est=_('cg-est').value,fpago=_('cg-fpago').value||fecha,pago=_('cg-pago').value;
+
+  // Si se seleccionan varias pantallas, el monto TOTAL se reparte en partes iguales
+  // y se genera un registro por cada pantalla (así el reparto queda hecho antes de llegar al Sheet).
+  const soportes=selSopsGasto.length?selSopsGasto.slice():[''];
+  const n=soportes.length;
+  const netoPorSoporte=Math.round((netoTotal/n)*100)/100;
+  const percepPorSoporte=Math.round((percepTotal/n)*100)/100;
+
+  const nuevosGastos=[];
   try{
-    if(URL_GS) await api('saveCosto',{fecha:g.fecha,fechaPago:g.fechaPago,soporte:g.sop,categoria:g.cat,descripcion:g.desc,monto:g.neto,formaPago:g.pago});
-    GASTOS.push(g);save(LS.gastos,GASTOS);flash('cg-ok');resetGasto();renderIva();
+    for(const sop of soportes){
+      const g={
+        id:'G-'+(GASTOS.length+nuevosGastos.length+1).toString().padStart(3,'0'),
+        fecha,fechaPago:fpago,cat,sop,desc,neto:netoPorSoporte,al,est,pago,
+        percep:percepPorSoporte,facturado,nroFactura,razonSocial
+      };
+      if(URL_GS) await api('saveCosto',{
+        fecha:g.fecha,fechaPago:g.fechaPago,soporte:g.sop,categoria:g.cat,descripcion:g.desc,
+        monto:g.neto,formaPago:g.pago,percepciones:g.percep,facturado:g.facturado,
+        nroFactura:g.nroFactura,razonSocial:g.razonSocial
+      });
+      nuevosGastos.push(g);
+    }
+    GASTOS.push(...nuevosGastos);save(LS.gastos,GASTOS);flash('cg-ok');resetGasto();renderIva();
   }catch(e){flashErr('cg-err',e.message);}
 }
-function resetGasto(){['cg-fecha','cg-fpago','cg-neto','cg-desc','cg-iva-c'].forEach(id=>_(id).value='');_('cg-iva').value='0';_('cg-sop').value='';_('cg-est').value='Pagado';}
+function resetGasto(){
+  ['cg-fecha','cg-fpago','cg-neto','cg-desc','cg-iva-c','cg-percep','cg-nrofactura','cg-razonsocial'].forEach(id=>_(id).value='');
+  _('cg-iva').value='0';_('cg-est').value='Pagado';_('cg-facturado').value='No';
+  toggleFacturado();buildChipsGasto();
+}
+function valG(row,keys){
+  for(const k of keys){if(row&&row[k]!==undefined&&row[k]!==null&&row[k]!=='') return row[k];}
+  return '';
+}
 async function syncGastos(){
   if(!URL_GS) return;
   try{
     const r=await api('getCostos');
-    GASTOS=r.data.map(g=>({id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',neto:numAR(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||''}));
+    GASTOS=r.data.map(g=>({
+      id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],
+      cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',
+      neto:numAR(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||'',
+      percep:numAR(valG(g,['Percepciones','PERCEPCIONES','Percepción']))||0,
+      facturado:valG(g,['Facturado','FACTURADO'])||'No',
+      nroFactura:valG(g,['N° de Factura','N° Factura','Nro Factura','NRO FACTURA']),
+      razonSocial:valG(g,['Razón Social','Razon Social','RAZÓN SOCIAL'])
+    }));
     save(LS.gastos,GASTOS);renderGastos();renderIva();
   }catch(e){alert('Error gastos: '+e.message);}
 }
@@ -1172,9 +1233,18 @@ function renderGastos(){
   if(desde) lista=lista.filter(g=>g.fechaPago>=desde);
   if(hasta) lista=lista.filter(g=>g.fechaPago<=hasta);
   if(est) lista=lista.filter(g=>g.est===est);
-  const totNeto=lista.reduce((a,g)=>a+g.neto,0),totIva=lista.reduce((a,g)=>a+g.neto*(g.al/100),0),pend=lista.filter(g=>g.est==='Pendiente').reduce((a,g)=>a+g.neto,0);
-  _('cos-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Total neto gastos</div><div class="stat-val">$${fmt(totNeto)}</div></div><div class="stat"><div class="stat-lbl">IVA crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div><div class="stat"><div class="stat-lbl">Pendiente de pago</div><div class="stat-val" style="color:var(--orange)">$${fmt(pend)}</div></div>`;
-  _('cos-tbody').innerHTML=lista.map(g=>{const iva=g.neto*(g.al/100),venc=g.est==='Pendiente'&&g.fechaPago<HOY;return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${g.id}</td><td>${fmtD(g.fecha)}</td><td>${g.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${g.sop||'General'}</td><td>${g.desc||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iva)}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto+iva)}</td><td><span class="bdg ${g.est==='Pagado'?'bdg-ok':venc?'bdg-err':'bdg-w'}">${g.est}</span></td><td style="font-size:11px;color:${venc?'var(--red)':'var(--text3)'}">${fmtD(g.fechaPago)}</td></tr>`;}).join('')||`<tr><td colspan="10" class="empty">Sin gastos.</td></tr>`;
+  const totNeto=lista.reduce((a,g)=>a+g.neto,0),totIva=lista.reduce((a,g)=>a+g.neto*(g.al/100),0),
+        totPercep=lista.reduce((a,g)=>a+(Number(g.percep)||0),0),
+        pend=lista.filter(g=>g.est==='Pendiente').reduce((a,g)=>a+g.neto,0);
+  _('cos-kpis').innerHTML=`<div class="stat"><div class="stat-lbl">Total neto gastos</div><div class="stat-val">$${fmt(totNeto)}</div></div><div class="stat"><div class="stat-lbl">IVA crédito fiscal</div><div class="stat-val" style="color:var(--green)">$${fmt(totIva)}</div></div><div class="stat"><div class="stat-lbl">Percepciones</div><div class="stat-val" style="color:var(--orange)">$${fmt(totPercep)}</div></div><div class="stat"><div class="stat-lbl">Pendiente de pago</div><div class="stat-val" style="color:var(--orange)">$${fmt(pend)}</div></div>`;
+  _('cos-tbody').innerHTML=lista.map(g=>{
+    const iva=g.neto*(g.al/100),venc=g.est==='Pendiente'&&g.fechaPago<HOY,percep=Number(g.percep)||0;
+    const total=g.neto+iva+percep;
+    const factBdg=g.facturado==='Si'
+      ?`<span class="bdg bdg-ok">Sí${g.nroFactura?': '+g.nroFactura:''}</span>${g.razonSocial?`<div style="font-size:9.5px;color:var(--text2);margin-top:2px">${g.razonSocial}</div>`:''}`
+      :`<span class="bdg bdg-neu">No</span>`;
+    return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${g.id}</td><td>${fmtD(g.fecha)}</td><td>${g.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${g.sop||'General'}</td><td>${g.desc||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iva)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--orange)">${percep?'$'+fmt(percep):'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(total)}</td><td style="font-size:11px">${factBdg}</td><td><span class="bdg ${g.est==='Pagado'?'bdg-ok':venc?'bdg-err':'bdg-w'}">${g.est}</span></td><td style="font-size:11px;color:${venc?'var(--red)':'var(--text3)'}">${fmtD(g.fechaPago)}</td></tr>`;
+  }).join('')||`<tr><td colspan="12" class="empty">Sin gastos.</td></tr>`;
 }
 
 // ── INVERSIONES ───────────────────────────────────────────
@@ -1477,8 +1547,8 @@ function renderCF(){
   });
   GASTOS.filter(g=>inPeriodo(g.fechaPago||g.fecha,desde,hasta)).forEach(g=>{
     movs.push({fecha:toISO(g.fechaPago||g.fecha),tipo:'Gasto',
-      det:(g.cat||'').trim()+(g.desc?' — '+g.desc:''),
-      ingreso:0,egreso:Number(g.neto||0)+(g.neto*(g.al/100)),esFuturo:(g.fechaPago||g.fecha)>HOY});
+      det:(g.cat||'').trim()+(g.sop?' · '+g.sop:'')+(g.desc?' — '+g.desc:''),
+      ingreso:0,egreso:Number(g.neto||0)+(g.neto*(g.al/100))+(Number(g.percep)||0),esFuturo:(g.fechaPago||g.fecha)>HOY});
   });
   movs.sort((a,b)=>a.fecha.localeCompare(b.fecha));
   let saldo=0;
@@ -1512,6 +1582,7 @@ function renderCF(){
 
 // ── INIT ──────────────────────────────────────────────────
 buildChips();
+buildChipsGasto();
 buildCliSelect();
 renderDash();
 renderDispGrid();
