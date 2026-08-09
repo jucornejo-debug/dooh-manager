@@ -254,11 +254,17 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
 <!-- COBRANZAS -->
 <div class="page" id="page-cobranzas">
   <div class="stats s4" id="cob-kpis"></div>
-  <div class="stabs">
-    <button class="stab on" onclick="setCobTab('pend',this)">Pendientes</button>
-    <button class="stab" onclick="setCobTab('prog',this)">Programados</button>
-    <button class="stab" onclick="setCobTab('ok',this)">Cobrados</button>
-    <button class="stab" onclick="setCobTab('all',this)">Todos</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <div class="stabs" style="margin-bottom:0">
+      <button class="stab on" onclick="setCobTab('pend',this)">Pendientes</button>
+      <button class="stab" onclick="setCobTab('prog',this)">Programados</button>
+      <button class="stab" onclick="setCobTab('ok',this)">Cobrados</button>
+      <button class="stab" onclick="setCobTab('all',this)">Todos</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="cob-loading" style="display:none;color:var(--text3);font-size:11px"><span class="spin"></span>Sincronizando...</span>
+      <button class="btn btn-prim btn-sm" onclick="syncCobros()">↻ Sincronizar</button>
+    </div>
   </div>
   <div class="form-box" id="cob-form-box">
     <div class="form-title">Registrar cobro</div>
