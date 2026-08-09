@@ -654,10 +654,12 @@ function go(page,el){
   if(page==='cashflow') setFechasDefecto('cf');
 }
 
+// NUEVO: Agregado syncCobros() a la función principal de sincronización global
 async function syncAll(){
   await syncOcupacion();
-  await Promise.allSettled([syncVentas(),syncGastos(),syncInversiones()]);
-  renderDash();renderIva();
+  await Promise.allSettled([syncVentas(), syncCobros(), syncGastos(), syncInversiones()]);
+  renderDash();
+  renderIva();
 }
 
 let OCUP_HOY = {};
@@ -1065,7 +1067,7 @@ async function guardarVenta(){
     orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
     cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases,
     totalFacturado: totalPorSoporte, nroFactura: _('nv-fac').value.trim(),
-    fechaEstimativaPago: fechaPagoEst  // se envía a la Sheet como campo extra
+    fechaEstimativaPago: fechaPagoEst
   };
   _('nv-load').style.display='block';
   try{
@@ -1101,6 +1103,54 @@ async function guardarCobro(){
   }catch(e){flashErr('nc-err',e.message);}
 }
 function resetCobro(){['nc-fecha','nc-monto','nc-fac','nc-obs','nc-iva-c'].forEach(id=>_(id).value='');_('nc-cli').value='';_('nc-iva').value='0';}
+
+// NUEVO: Función para sincronizar los cobros desde el backend
+async function syncCobros(){
+  if(!URL_GS) return;
+  const loading = _('cob-loading');
+  if(loading) loading.style.display = 'inline-block';
+  
+  try {
+    const r = await api('getCobros');
+    COBROS = (r.data || []).map(c => {
+      const neto = numAR(c['Monto Neto de IVA']) || 0;
+      const iva = numAR(c['IVA']) || 0;
+      const total = neto + iva;
+      
+      // Intentamos deducir la alícuota en base al IVA
+      let ivaAl = 0;
+      if (neto > 0 && iva > 0) {
+         const pct = (iva / neto) * 100;
+         if (Math.abs(pct - 21) < 2) ivaAl = 21;
+         else if (Math.abs(pct - 10.5) < 2) ivaAl = 10.5;
+      }
+      
+      const fReal = toISO(c['Fecha de Pago Real']);
+      const fProy = toISO(c['Fecha de Cobro Proyectada']);
+
+      return {
+        id: c['ID Cobro'] || '',
+        cliente: c['Cliente'] || '',
+        orden: c['N° Orden de Publicidad'] || '',
+        fecha: fReal || fProy || '',
+        monto: total,
+        ivaAl: ivaAl,
+        pago: c['Método de Pago'] || '',
+        obs: '' 
+      };
+    });
+    
+    save(LS.cobros, COBROS);
+    renderCob();
+    renderDash();
+    renderIva();
+  } catch(e) {
+    console.warn('Error al sincronizar cobros:', e.message);
+  } finally {
+    if(loading) loading.style.display = 'none';
+  }
+}
+
 function renderCob(){
   // FIX: Facturado = Cobrado + Pendiente (total campañas)
   const totalFact = CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
@@ -1600,10 +1650,20 @@ if(URL_GS){
       await api('ping');
       st.textContent='✓ Conectado';st.style.color='var(--green)';
       document.getElementById('cfg').style.display='none';
+      
+      // Sincronizaciones iniciales
       syncOcupacion().then(()=>renderDash());
       syncVentas().then(()=>{renderDash();buildCliSelect();});
       syncGastos().then(()=>{renderIva();});
       syncInversiones().then(()=>{renderIva();});
+      
+      // NUEVO: Disparamos la sincronización de cobros al iniciar
+      syncCobros().then(() => {
+        renderCob();
+        renderDash();
+        renderIva();
+      });
+      
     }catch(e){
       st.textContent='✗ Sin conexión';st.style.color='var(--red)';
       document.getElementById('cfg').style.display='flex';
