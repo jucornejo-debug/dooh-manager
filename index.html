@@ -329,7 +329,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
           <div class="hint">Si dejás esto vacío, el gasto se registra como general (sin soporte). Si elegís varios, el monto total se divide en partes iguales entre los soportes seleccionados y se genera un registro por cada uno.</div>
         </div>
         <div class="field"><label>Descripción</label><input type="text" id="cg-desc" placeholder="Ej: Reparación pantalla LED T3-P2"></div>
-        <div class="field"><label>Monto total neto ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
+        <div class="field"><label>Monto total ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
         <div class="field"><label>IVA</label>
           <select id="cg-iva" onchange="calcIvaGasto()">
             <option value="0">Sin IVA</option><option value="21">21%</option><option value="10.5">10.5%</option>
@@ -409,7 +409,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         <div class="field full"><label>Descripción</label><input type="text" id="iv-desc" placeholder="Detalle del activo adquirido"></div>
         <div class="field"><label>Monto total ($)</label><input type="number" id="iv-monto" placeholder="0" oninput="calcIvaInv();calcDeprec()"></div>
         <div class="field"><label>Alícuota IVA</label>
-          <select id="iv-iva-al" onchange="calcIvaInv()">
+          <select id="iv-iva-al" onchange="calcIvaInv();calcDeprec()">
             <option value="0">Sin IVA / Exento</option>
             <option value="21" selected>21%</option>
             <option value="10.5">10.5%</option>
@@ -578,8 +578,6 @@ let SOPS=[
 const _=id=>document.getElementById(id);
 const fmt=n=>Math.round(n||0).toLocaleString('es-AR');
 function numAR(v){
-  // FIX: parsea números en formato argentino correctamente
-  // 100.000 → 100000 | 100.000,50 → 100000.50 | 1500 → 1500 | 1500,50 → 1500.50
   if(v === null || v === undefined || v === '') return 0;
   let s = String(v).replace(/\$/g,'').replace(/\s/g,'').trim();
   if(!s) return 0;
@@ -588,26 +586,19 @@ function numAR(v){
   const hasComma = s.includes(',');
 
   if(hasDot && hasComma){
-    // Tiene ambos: el que aparece primero es el separador de miles
     const dotPos = s.indexOf('.');
     const commaPos = s.indexOf(',');
     if(dotPos < commaPos){
-      // 100.000,50 → separador de miles=punto, decimal=coma
       s = s.replace(/\./g,'').replace(',','.');
     } else {
-      // 100,000.50 → separador de miles=coma, decimal=punto
       s = s.replace(/,/g,'');
     }
   } else if(hasDot){
-    // Solo punto: podría ser miles (100.000) o decimal (1500.50)
     const parts = s.split('.');
     if(parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1){
-      // Patrón X.XXX → separador de miles (ej: 100.000)
       s = s.replace(/\./g,'');
     }
-    // Si no cumple el patrón (ej: 1500.50) lo dejamos como está (decimal inglés)
   } else if(hasComma){
-    // Solo coma: separador decimal argentino (1500,50)
     s = s.replace(',','.');
   }
 
@@ -632,7 +623,10 @@ function toISO(s){
 const fmtD=s=>{const iso=toISO(s);if(!iso)return'—';try{return new Date(iso+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch{return iso;}};
 const hoy=new Date();const HOY=hoy.toISOString().slice(0,10);
 const olap=(a,b,c,d)=>new Date(a)<=new Date(d)&&new Date(b)>=new Date(c);
-const ivaC=(m,a)=>a?Math.round(m*a/100/(1+a/100)):0;
+
+// NUEVA FUNCION DE IVA CORREGIDA
+const ivaC = (m, a) => a ? Math.round((m / (1 + a / 100)) * (a / 100)) : 0;
+
 function flash(id){_(id).style.display='block';setTimeout(()=>_(id).style.display='none',3500);}
 function flashErr(id,msg){_(id).textContent='✗ '+msg;_(id).style.display='block';setTimeout(()=>_(id).style.display='none',5000);}
 
@@ -654,7 +648,6 @@ function go(page,el){
   if(page==='cashflow') setFechasDefecto('cf');
 }
 
-// NUEVO: Agregado syncCobros() a la función principal de sincronización global
 async function syncAll(){
   await syncOcupacion();
   await Promise.allSettled([syncVentas(), syncCobros(), syncGastos(), syncInversiones()]);
@@ -667,7 +660,6 @@ let OCUP_HOY = {};
 function numSheet(v){
   if(v === null || v === undefined || v === '') return 0;
   if(typeof v === 'number') return v;
-  // Reusar numAR para consistencia
   return numAR(v);
 }
 
@@ -835,9 +827,6 @@ function sopCardHTML(s, ocp, extra) {
 function renderDash(){
   const desde=_('dd-desde').value, hasta=_('dd-hasta').value, filtE=_('dd-est').value;
 
-  // FIX: Facturado = Pendiente + Cobrado (total de campañas)
-  // Cobrado = cobros con fecha <= hoy
-  // Pendiente = diferencia entre total facturado y lo cobrado real
   const totalFact = CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
   const cobrado   = COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
   const pendiente = Math.max(0, totalFact - cobrado);
@@ -1104,7 +1093,6 @@ async function guardarCobro(){
 }
 function resetCobro(){['nc-fecha','nc-monto','nc-fac','nc-obs','nc-iva-c'].forEach(id=>_(id).value='');_('nc-cli').value='';_('nc-iva').value='0';}
 
-// NUEVO: Función para sincronizar los cobros desde el backend
 async function syncCobros(){
   if(!URL_GS) return;
   const loading = _('cob-loading');
@@ -1117,7 +1105,6 @@ async function syncCobros(){
       const iva = numAR(c['IVA']) || 0;
       const total = neto + iva;
       
-      // Intentamos deducir la alícuota en base al IVA
       let ivaAl = 0;
       if (neto > 0 && iva > 0) {
          const pct = (iva / neto) * 100;
@@ -1152,7 +1139,6 @@ async function syncCobros(){
 }
 
 function renderCob(){
-  // FIX: Facturado = Cobrado + Pendiente (total campañas)
   const totalFact = CAMPS.reduce((a,c)=>a+Number(c.total||0),0);
   const cobHoy    = COBROS.filter(c=>c.fecha<=HOY).reduce((a,c)=>a+Number(c.monto||0),0);
   const cobFut    = COBROS.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
@@ -1178,7 +1164,6 @@ function renderCob(){
     const cobF=cobrosCli.filter(c=>c.fecha>HOY).reduce((a,c)=>a+Number(c.monto||0),0);
     const pend=Math.max(0,tot-cobReal);
     const pct=tot>0?Math.round((cobReal/tot)*100):0;
-    // Fecha est. pago de campañas pendientes
     const fechasEst = campsCli
       .filter(c=>c.fechaPagoEst && c.cobro !== 'Cobrado')
       .map(c=>c.fechaPagoEst).sort();
@@ -1221,43 +1206,58 @@ function toggleFacturado(){
   _('cg-fact-wrap-razon').style.display=si?'':'none';
   if(!si){_('cg-nrofactura').value='';_('cg-razonsocial').value='';}
 }
-function calcIvaGasto(){const m=parseFloat(_('cg-neto').value)||0,a=parseFloat(_('cg-iva').value)||0;_('cg-iva-c').value=a?'$'+fmt(m*(a/100)):'$0';}
+
+function calcIvaGasto(){
+  const m = parseFloat(_('cg-neto').value) || 0;
+  const a = parseFloat(_('cg-iva').value) || 0;
+  _('cg-iva-c').value = a ? '$' + fmt(ivaC(m, a)) : '$0';
+}
+
 async function guardarGasto(){
-  const fecha=_('cg-fecha').value,netoTotal=parseFloat(_('cg-neto').value)||0;
-  if(!fecha||!netoTotal){alert('Ingresá fecha y monto.');return;}
-  const al=parseFloat(_('cg-iva').value)||0;
-  const percepTotal=parseFloat(_('cg-percep').value)||0;
-  const facturado=_('cg-facturado').value;
-  const nroFactura=facturado==='Si'?_('cg-nrofactura').value.trim():'';
-  const razonSocial=facturado==='Si'?_('cg-razonsocial').value.trim():'';
-  if(facturado==='Si'&&(!nroFactura||!razonSocial)){alert('Si el gasto está facturado, completá N° de Factura y Razón Social.');return;}
-  const cat=_('cg-cat').value,desc=_('cg-desc').value,est=_('cg-est').value,fpago=_('cg-fpago').value||fecha,pago=_('cg-pago').value;
+  const fecha = _('cg-fecha').value;
+  const montoIngresado = parseFloat(_('cg-neto').value) || 0;
+  if(!fecha || !montoIngresado){alert('Ingresá fecha y monto.'); return;}
+  
+  const al = parseFloat(_('cg-iva').value) || 0;
+  const ivaTotal = ivaC(montoIngresado, al);
+  const netoTotal = montoIngresado - ivaTotal; // Se extrae el IVA para guardar el neto real
+  
+  const percepTotal = parseFloat(_('cg-percep').value) || 0;
+  const facturado = _('cg-facturado').value;
+  const nroFactura = facturado === 'Si' ? _('cg-nrofactura').value.trim() : '';
+  const razonSocial = facturado === 'Si' ? _('cg-razonsocial').value.trim() : '';
+  
+  if(facturado === 'Si' && (!nroFactura || !razonSocial)){
+    alert('Si el gasto está facturado, completá N° de Factura y Razón Social.'); return;
+  }
+  
+  const cat = _('cg-cat').value, desc = _('cg-desc').value, est = _('cg-est').value;
+  const fpago = _('cg-fpago').value || fecha, pago = _('cg-pago').value;
 
-  // Si se seleccionan varias pantallas, el monto TOTAL se reparte en partes iguales
-  // y se genera un registro por cada pantalla (así el reparto queda hecho antes de llegar al Sheet).
-  const soportes=selSopsGasto.length?selSopsGasto.slice():[''];
-  const n=soportes.length;
-  const netoPorSoporte=Math.round((netoTotal/n)*100)/100;
-  const percepPorSoporte=Math.round((percepTotal/n)*100)/100;
+  const soportes = selSopsGasto.length ? selSopsGasto.slice() : [''];
+  const n = soportes.length;
+  const netoPorSoporte = Math.round((netoTotal / n) * 100) / 100;
+  const percepPorSoporte = Math.round((percepTotal / n) * 100) / 100;
 
-  const nuevosGastos=[];
-  try{
+  const nuevosGastos = [];
+  try {
     for(const sop of soportes){
-      const g={
-        id:'G-'+(GASTOS.length+nuevosGastos.length+1).toString().padStart(3,'0'),
-        fecha,fechaPago:fpago,cat,sop,desc,neto:netoPorSoporte,al,est,pago,
-        percep:percepPorSoporte,facturado,nroFactura,razonSocial
+      const g = {
+        id: 'G-' + (GASTOS.length + nuevosGastos.length + 1).toString().padStart(3, '0'),
+        fecha, fechaPago: fpago, cat, sop, desc, neto: netoPorSoporte, al, est, pago,
+        percep: percepPorSoporte, facturado, nroFactura, razonSocial
       };
-      if(URL_GS) await api('saveCosto',{
-        fecha:g.fecha,fechaPago:g.fechaPago,soporte:g.sop,categoria:g.cat,descripcion:g.desc,
-        monto:g.neto,formaPago:g.pago,percepciones:g.percep,facturado:g.facturado,
-        nroFactura:g.nroFactura,razonSocial:g.razonSocial
+      if(URL_GS) await api('saveCosto', {
+        fecha: g.fecha, fechaPago: g.fechaPago, soporte: g.sop, categoria: g.cat, descripcion: g.desc,
+        monto: g.neto, formaPago: g.pago, percepciones: g.percep, facturado: g.facturado,
+        nroFactura: g.nroFactura, razonSocial: g.razonSocial
       });
       nuevosGastos.push(g);
     }
-    GASTOS.push(...nuevosGastos);save(LS.gastos,GASTOS);flash('cg-ok');resetGasto();renderIva();
-  }catch(e){flashErr('cg-err',e.message);}
+    GASTOS.push(...nuevosGastos); save(LS.gastos, GASTOS); flash('cg-ok'); resetGasto(); renderIva();
+  } catch(e) { flashErr('cg-err', e.message); }
 }
+
 function resetGasto(){
   ['cg-fecha','cg-fpago','cg-neto','cg-desc','cg-iva-c','cg-percep','cg-nrofactura','cg-razonsocial'].forEach(id=>_(id).value='');
   _('cg-iva').value='0';_('cg-est').value='Pagado';_('cg-facturado').value='No';
@@ -1306,25 +1306,49 @@ function renderGastos(){
 // ── INVERSIONES ───────────────────────────────────────────
 let invTab='form';
 function setInvTab(t,el){invTab=t;document.querySelectorAll('#page-inversiones .stab').forEach(x=>x.classList.remove('on'));el.classList.add('on');_('inv-form').style.display=t==='form'?'block':'none';_('inv-lista').style.display=t==='lista'?'block':'none';if(t==='lista') renderInvLista();}
+
 function calcIvaInv(){
-  const m=parseFloat(_('iv-monto').value)||0;
-  const al=parseFloat(_('iv-iva-al').value)||0;
-  _('iv-iva').value=al?'$'+fmt(Math.round(m*(al/100))):'$0';
+  const m = parseFloat(_('iv-monto').value) || 0;
+  const al = parseFloat(_('iv-iva-al').value) || 0;
+  _('iv-iva').value = al ? '$' + fmt(ivaC(m, al)) : '$0';
 }
-function calcDeprec(){const m=parseFloat(_('iv-monto').value)||0,v=parseInt(_('iv-vida').value)||60,r=parseFloat(_('iv-resid').value)||0;_('iv-dep').value=v>0?'$'+fmt(Math.round((m-r)/v))+'/mes':'—';}
+
+function calcDeprec(){
+  const mIngresado = parseFloat(_('iv-monto').value) || 0;
+  const al = parseFloat(_('iv-iva-al').value) || 0;
+  const mNeto = mIngresado - ivaC(mIngresado, al); // La depreciación es sobre el neto
+  const v = parseInt(_('iv-vida').value) || 60;
+  const r = parseFloat(_('iv-resid').value) || 0;
+  _('iv-dep').value = v > 0 ? '$' + fmt(Math.round((mNeto - r) / v)) + '/mes' : '—';
+}
+
 async function guardarInv(){
-  const fecha=_('iv-fecha').value,monto=parseFloat(_('iv-monto').value)||0;
-  if(!fecha||!monto){alert('Ingresá fecha y monto.');return;}
-  const vida=parseInt(_('iv-vida').value)||60,resid=parseFloat(_('iv-resid').value)||0;
-  const dep=vida>0?Math.round((monto-resid)/vida):0;
-  const ivaAl=parseFloat(_('iv-iva-al').value)||0;
-  const ivaInv=Math.round(monto*(ivaAl/100));
-  const inv={id:'I-'+(INVS.length+1).toString().padStart(2,'0'),fecha,sop:_('iv-sop').value,cat:_('iv-cat').value,desc:_('iv-desc').value,prov:_('iv-prov').value,monto,iva:ivaInv,vida,resid,dep};
-  try{
-    if(URL_GS) await api('saveInversion',{fecha:inv.fecha,soporte:inv.sop,categoria:inv.cat,descripcion:inv.desc,proveedor:inv.prov,monto:inv.monto,iva:inv.iva,vidaUtil:inv.vida,valorResidual:inv.resid});
-    INVS.push(inv);save(LS.inv,INVS);flash('inv-ok');resetInv();renderIva();
-  }catch(e){flashErr('inv-err',e.message);}
+  const fecha = _('iv-fecha').value;
+  const montoIngresado = parseFloat(_('iv-monto').value) || 0;
+  if(!fecha || !montoIngresado){alert('Ingresá fecha y monto.'); return;}
+  
+  const ivaAl = parseFloat(_('iv-iva-al').value) || 0;
+  const ivaInv = ivaC(montoIngresado, ivaAl);
+  const montoNeto = montoIngresado - ivaInv; // Se extrae el IVA
+  
+  const vida = parseInt(_('iv-vida').value) || 60;
+  const resid = parseFloat(_('iv-resid').value) || 0;
+  const dep = vida > 0 ? Math.round((montoNeto - resid) / vida) : 0;
+  
+  const inv = {
+    id: 'I-' + (INVS.length + 1).toString().padStart(2, '0'),
+    fecha, sop: _('iv-sop').value, cat: _('iv-cat').value, desc: _('iv-desc').value, prov: _('iv-prov').value, 
+    monto: montoNeto, iva: ivaInv, vida, resid, dep
+  };
+  try {
+    if(URL_GS) await api('saveInversion', {
+      fecha: inv.fecha, soporte: inv.sop, categoria: inv.cat, descripcion: inv.desc, proveedor: inv.prov, 
+      monto: inv.monto, iva: inv.iva, vidaUtil: inv.vida, valorResidual: inv.resid
+    });
+    INVS.push(inv); save(LS.inv, INVS); flash('inv-ok'); resetInv(); renderIva();
+  } catch(e) { flashErr('inv-err', e.message); }
 }
+
 function resetInv(){['iv-fecha','iv-cat','iv-prov','iv-desc','iv-monto','iv-iva','iv-vida','iv-resid','iv-dep'].forEach(id=>_(id).value='');_('iv-iva-al').value='21';}
 async function syncInversiones(){
   if(!URL_GS) return;
