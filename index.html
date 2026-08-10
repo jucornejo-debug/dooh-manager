@@ -1221,7 +1221,7 @@ function toggleFacturado(){
   _('cg-fact-wrap-razon').style.display=si?'':'none';
   if(!si){_('cg-nrofactura').value='';_('cg-razonsocial').value='';}
 }
-function calcIvaGasto(){const m=parseFloat(_('cg-neto').value)||0,a=parseFloat(_('cg-iva').value)||0;_('cg-iva-c').value=a?'$'+fmt(m*/(1+(a/100))*a):'$0';}
+function calcIvaGasto(){const m=parseFloat(_('cg-neto').value)||0,a=parseFloat(_('cg-iva').value)||0;_('cg-iva-c').value=a?'$'+fmt(m*(a/100)):'$0';}
 async function guardarGasto(){
   const fecha=_('cg-fecha').value,netoTotal=parseFloat(_('cg-neto').value)||0;
   if(!fecha||!netoTotal){alert('Ingresá fecha y monto.');return;}
