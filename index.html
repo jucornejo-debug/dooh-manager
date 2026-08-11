@@ -182,6 +182,13 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       <div class="field"><label>Fecha inicio</label><input type="date" id="dsp-ini" oninput="checkDisp()"></div>
       <div class="field"><label>Fecha fin</label><input type="date" id="dsp-fin" oninput="checkDisp()"></div>
       <div class="field"><label>Pases/día solicitados</label><input type="number" id="dsp-pases" min="1" max="2880" placeholder="240" oninput="checkDisp()"></div>
+      <div class="field">
+        <label>Duración (s)</label>
+        <select id="dsp-duracion" onchange="checkDisp()">
+          <option value="10">10 segundos</option>
+          <option value="15">15 segundos</option>
+        </select>
+      </div>
       <div class="field"><label>Filtrar</label>
         <select id="dsp-filt" onchange="checkDisp()">
           <option value="">Todos los soportes</option>
@@ -227,6 +234,13 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       <div class="field"><label>Fecha inicio</label><input type="date" id="nv-ini" oninput="checkAvNV()"></div>
       <div class="field"><label>Fecha fin</label><input type="date" id="nv-fin" oninput="checkAvNV()"></div>
       <div class="field"><label>Pases por día (por soporte)</label><input type="number" id="nv-pases" min="1" max="2880" placeholder="240" oninput="checkAvNV()"></div>
+      <div class="field">
+        <label>Duración del pase</label>
+        <select id="nv-duracion" onchange="checkAvNV()">
+          <option value="10">10 segundos</option>
+          <option value="15">15 segundos</option>
+        </select>
+      </div>
       <div class="field"><label>Total facturado ($)</label><input type="number" id="nv-total" placeholder="0"></div>
       <div class="field"><label>N° Factura (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
       <div class="field"><label>Estado cobro</label>
@@ -624,7 +638,6 @@ const fmtD=s=>{const iso=toISO(s);if(!iso)return'—';try{return new Date(iso+'T
 const hoy=new Date();const HOY=hoy.toISOString().slice(0,10);
 const olap=(a,b,c,d)=>new Date(a)<=new Date(d)&&new Date(b)>=new Date(c);
 
-// NUEVA FUNCION DE IVA CORREGIDA
 const ivaC = (m, a) => a ? Math.round((m / (1 + a / 100)) * (a / 100)) : 0;
 
 function flash(id){_(id).style.display='block';setTimeout(()=>_(id).style.display='none',3500);}
@@ -701,10 +714,11 @@ async function syncOcupacion(){
   }
 }
 
-// ── OCUPACIÓN ─────────────────────────────────────────────
-function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
+// ── OCUPACIÓN EN SEGUNDOS ─────────────────────────────────────────────
+function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0, duracionSolicitada = 10) {
   const sop = SOPS.find(s => s.id === sopId) || {};
-  const cap = Number(sop.cap) || 2592;
+  const capPases = Number(sop.cap) || 2592;
+  const capSegundos = capPases * 10; // Capacidad física a segundos
 
   const campsSop = CAMPS.filter(c =>
     (c.soportes || []).includes(sopId) &&
@@ -715,14 +729,14 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
   if (!desde || !hasta) {
     if (OCUP_HOY[sopId]) {
       const o = OCUP_HOY[sopId];
-      const vendido = Number(o.vendido) || 0;
-      const capReal = Number(o.cap) || cap;
+      const vendidoSegs = (Number(o.vendido) || 0) * 10; // Asumiendo que OCUP_HOY viene en pases desde Sheets
+      const capRealSegs = (Number(o.cap) || capPases) * 10;
       return {
-        pico: vendido,
-        fechaPico: vendido > 0 ? HOY : '',
-        fechasPico: vendido > 0 ? [HOY] : [],
-        disponible: Math.max(0, capReal - vendido),
-        pct: capReal > 0 ? Math.min(100, Math.round((vendido / capReal) * 100)) : 0,
+        pico: vendidoSegs,
+        fechaPico: vendidoSegs > 0 ? HOY : '',
+        fechasPico: vendidoSegs > 0 ? [HOY] : [],
+        disponible: Math.max(0, capRealSegs - vendidoSegs),
+        pct: capRealSegs > 0 ? Math.min(100, Math.round((vendidoSegs / capRealSegs) * 100)) : 0,
         fechasSinDisponible: [],
         diasConflicto: 0,
         totalDias: 1,
@@ -737,11 +751,11 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
   const dFin = new Date(hasta + 'T00:00:00');
 
   if (isNaN(dInicio.getTime()) || isNaN(dFin.getTime()) || dInicio > dFin) {
-    return { pico:0, fechaPico:'', fechasPico:[], disponible:cap, pct:0, fechasSinDisponible:[], diasConflicto:0, totalDias:0, label:'rango inválido' };
+    return { pico:0, fechaPico:'', fechasPico:[], disponible:capSegundos, pct:0, fechasSinDisponible:[], diasConflicto:0, totalDias:0, label:'rango inválido' };
   }
 
   const totalDias = Math.max(1, Math.round((dFin - dInicio) / 86400000) + 1);
-  let picoPases = 0;
+  let picoSegundos = 0;
   let fechasPico = [];
   let fechasSinDisponible = [];
 
@@ -749,26 +763,33 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0) {
     const dia = new Date(dInicio);
     dia.setDate(dia.getDate() + i);
     const diaStr = dia.toISOString().slice(0, 10);
-    const pasesDia = campsSop
+    
+    // Acá multiplicamos (pases × duración) para saber los SEGUNDOS consumidos
+    const segsDia = campsSop
       .filter(c => c.ini <= diaStr && c.fin >= diaStr)
-      .reduce((a, c) => a + Number(c.pases || 0), 0);
-    if (pasesDia > picoPases) {
-      picoPases = pasesDia;
-      fechasPico = pasesDia > 0 ? [diaStr] : [];
-    } else if (pasesDia > 0 && pasesDia === picoPases) {
+      .reduce((a, c) => a + (Number(c.pases || 0) * Number(c.duracion || 10)), 0);
+      
+    if (segsDia > picoSegundos) {
+      picoSegundos = segsDia;
+      fechasPico = segsDia > 0 ? [diaStr] : [];
+    } else if (segsDia > 0 && segsDia === picoSegundos) {
       fechasPico.push(diaStr);
     }
-    if (pasesSolicitados && pasesDia + pasesSolicitados > cap) {
-      fechasSinDisponible.push(diaStr);
+    
+    // Verificamos conflicto comparando los segundos requeridos vs la capacidad total en segundos
+    if (pasesSolicitados) {
+       if (segsDia + (pasesSolicitados * duracionSolicitada) > capSegundos) {
+         fechasSinDisponible.push(diaStr);
+       }
     }
   }
 
   return {
-    pico: picoPases,
+    pico: picoSegundos,
     fechaPico: fechasPico[0] || '',
     fechasPico,
-    disponible: Math.max(0, cap - picoPases),
-    pct: cap > 0 ? Math.min(100, Math.round((picoPases / cap) * 100)) : 0,
+    disponible: Math.max(0, capSegundos - picoSegundos),
+    pct: capSegundos > 0 ? Math.min(100, Math.round((picoSegundos / capSegundos) * 100)) : 0,
     fechasSinDisponible,
     diasConflicto: fechasSinDisponible.length,
     totalDias,
@@ -785,10 +806,10 @@ const colOcup = p => p >= 90 ? 'var(--red)' : p >= 25 ? 'var(--orange)' : 'var(-
 const lblOcup = p => p >= 90 ? 'Sin disp.' : p >= 25 ? 'Parcial' : 'Libre';
 const bdgOcup = p => p >= 90 ? 'bdg-err' : p >= 25 ? 'bdg-w' : 'bdg-ok';
 
-function sopCardHTML(s, ocp, extra) {
-  const cap = Number(s.cap) || 2592;
-  const p = cap > 0 ? Math.min(100, Math.round((ocp / cap) * 100)) : 0;
-  const disp = Math.max(0, cap - ocp);
+function sopCardHTML(s, ocpSegs, extra) {
+  const capSegs = (Number(s.cap) || 2592) * 10;
+  const p = capSegs > 0 ? Math.min(100, Math.round((ocpSegs / capSegs) * 100)) : 0;
+  const disp = Math.max(0, capSegs - ocpSegs);
 
   const fechasPicoTxt = extra && extra.fechasPico && extra.fechasPico.length
     ? extra.fechasPico.slice(0, 3).map(fmtD).join(', ') + (extra.fechasPico.length > 3 ? ` +${extra.fechasPico.length - 3} más` : '')
@@ -815,8 +836,8 @@ function sopCardHTML(s, ocp, extra) {
       <div class="bar-fill" style="width:${p}%;background:${colOcup(p)}"></div>
     </div>
     <div class="sop-foot">
-      <span>${fmt(ocp)} pico/día</span>
-      <span>${fmt(disp)} libres</span>
+      <span>${fmt(ocpSegs)} segs/día</span>
+      <span>${fmt(disp)} segs libres</span>
     </div>
     ${picoTxt}
     ${conflictoTxt}
@@ -872,14 +893,16 @@ function checkDisp(){
   const ini = _('dsp-ini').value;
   const fin = _('dsp-fin').value;
   const pases = parseInt(_('dsp-pases').value) || 0;
+  const duracion = parseInt(_('dsp-duracion').value) || 10;
   const filtro = _('dsp-filt').value;
 
   let lista = SOPS.map(s => {
     const oc = ini && fin
-      ? ocupacionSoporte(s.id, ini, fin, pases)
-      : ocupacionSoporte(s.id, null, null, pases);
-    const ok = !pases || pases <= oc.disponible;
-    return { s, oc, ok };
+      ? ocupacionSoporte(s.id, ini, fin, pases, duracion)
+      : ocupacionSoporte(s.id, null, null, pases, duracion);
+    const reqSegs = pases * duracion;
+    const ok = !pases || reqSegs <= oc.disponible;
+    return { s, oc, ok, reqSegs };
   });
 
   if(filtro === 'ok') lista = lista.filter(x => x.ok);
@@ -889,10 +912,11 @@ function checkDisp(){
     const s = x.s;
     const oc = x.oc;
     const ok = x.ok;
-    const cap = Number(s.cap) || 2592;
+    const reqSegs = x.reqSegs;
+    const capSegs = (Number(s.cap) || 2592) * 10;
 
-    const pAfter = cap > 0
-      ? Math.min(100, Math.round(((oc.pico + (pases || 0)) / cap) * 100))
+    const pAfter = capSegs > 0
+      ? Math.min(100, Math.round(((oc.pico + (reqSegs || 0)) / capSegs) * 100))
       : 0;
 
     const fechasPicoTxt = oc.fechasPico && oc.fechasPico.length
@@ -920,10 +944,10 @@ function checkDisp(){
         <div class="bar-fill" style="width:${oc.pct}%;background:${colOcup(oc.pct)}"></div>
       </div>
       <div class="sop-foot">
-        <span>Pico: ${fmt(oc.pico)}/día</span>
+        <span>Pico: ${fmt(oc.pico)} segs</span>
         <span>Libres: <strong style="color:${ok ? 'var(--green)' : 'var(--red)'}">${fmt(oc.disponible)}</strong></span>
       </div>
-      <div style="font-size:9.5px;color:var(--text2);margin-top:5px">Capacidad: ${fmt(cap)} pases/día</div>
+      <div style="font-size:9.5px;color:var(--text2);margin-top:5px">Capacidad: ${fmt(capSegs)} segs/día</div>
       <div style="font-size:9.5px;color:var(--text2);margin-top:4px">Fecha pico: ${fechasPicoTxt}</div>
       ${fechasProblemaTxt ? `<div style="font-size:9.5px;color:var(--red);margin-top:5px">No disponible: ${fechasProblemaTxt}</div>` : ''}
     </div>`;
@@ -947,6 +971,7 @@ async function syncVentas(){
           ini: toISO(row['Fecha Inicio']),
           fin: toISO(row['Fecha Fin']),
           pases: Number(row['Pases']) || 0,
+          duracion: Number(row['Duración (s)']) || 10,
           total: 0,
           factura: row['N° de Factura'],
           cobro: row['Estado Facturación'] || '',
@@ -1004,21 +1029,23 @@ function checkAvNV(){
   const ini = _('nv-ini').value;
   const fin = _('nv-fin').value;
   const pases = parseInt(_('nv-pases').value) || 0;
+  const duracion = parseInt(_('nv-duracion').value) || 10;
   const box = _('nv-avail');
 
   if(!selSops.length || !ini || !fin || !pases){ box.style.display='none'; return; }
 
   let rows = '';
   let anyBad = false;
+  const reqSegs = pases * duracion;
 
   selSops.forEach(sid => {
     const s = SOPS.find(x => x.id === sid);
     if(!s) return;
-    const cap = Number(s.cap) || 2592;
-    const oc = ocupacionSoporte(sid, ini, fin, pases);
-    const ok = pases <= oc.disponible;
+    const capSegs = (Number(s.cap) || 2592) * 10;
+    const oc = ocupacionSoporte(sid, ini, fin, pases, duracion);
+    const ok = reqSegs <= oc.disponible;
     if(!ok) anyBad = true;
-    const pAfter = cap > 0 ? Math.min(100, Math.round(((oc.pico + pases) / cap) * 100)) : 0;
+    const pAfter = capSegs > 0 ? Math.min(100, Math.round(((oc.pico + reqSegs) / capSegs) * 100)) : 0;
     const fechasPicoTxt = oc.fechasPico && oc.fechasPico.length
       ? oc.fechasPico.slice(0, 3).map(fmtD).join(', ') + (oc.fechasPico.length > 3 ? ` +${oc.fechasPico.length - 3} más` : '')
       : '—';
@@ -1028,9 +1055,9 @@ function checkAvNV(){
     rows += `<div class="avail-row">
       <span style="font-weight:600">${sid}</span>
       <span>
-        Capacidad: ${fmt(cap)} · Pico: ${fmt(oc.pico)} el ${fechasPicoTxt} ·
+        Capacidad: ${fmt(capSegs)} · Pico: ${fmt(oc.pico)} el ${fechasPicoTxt} ·
         Libres: <strong style="color:${ok ? 'var(--green)' : 'var(--red)'}">${fmt(oc.disponible)}</strong> ·
-        Solicitás: ${fmt(pases)} · Final: <strong style="color:${pAfter >= 90 ? 'var(--red)' : pAfter >= 60 ? 'var(--orange)' : 'var(--green)'}">${pAfter}%</strong>
+        Solicitás: ${fmt(reqSegs)} · Final: <strong style="color:${pAfter >= 90 ? 'var(--red)' : pAfter >= 60 ? 'var(--orange)' : 'var(--green)'}">${pAfter}%</strong>
         ${fechasProblemaTxt ? `<br><span style="color:var(--red)">No entra: ${fechasProblemaTxt}</span>` : ''}
       </span>
     </div>`;
@@ -1043,18 +1070,20 @@ function checkAvNV(){
   </div>`;
   box.style.display = 'block';
 }
+
 async function guardarVenta(){
   const cli = _('nv-cli').value.trim();
   const ini = _('nv-ini').value;
   const fin = _('nv-fin').value;
   const pases = parseInt(_('nv-pases').value) || 0;
+  const duracion = parseInt(_('nv-duracion').value) || 10;
   if(!cli || !selSops.length || !ini || !fin || !pases){ alert('Completá: cliente, al menos un soporte, fechas y pases.'); return; }
   const totalCampania = parseFloat(_('nv-total').value) || 0;
   const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
   const fechaPagoEst = _('nv-fechapago').value || '';
   const payload = {
     orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
-    cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases,
+    cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases, duracion,
     totalFacturado: totalPorSoporte, nroFactura: _('nv-fac').value.trim(),
     fechaEstimativaPago: fechaPagoEst
   };
@@ -1067,7 +1096,13 @@ async function guardarVenta(){
   }catch(e){flashErr('nv-err', e.message);}
   finally{_('nv-load').style.display='none';}
 }
-function resetNV(){selSops=[];buildChips();['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs','nv-fechapago'].forEach(id=>_(id).value='');_('nv-avail').style.display='none';}
+function resetNV(){
+  selSops=[];
+  buildChips();
+  ['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs','nv-fechapago'].forEach(id=>_(id).value='');
+  _('nv-duracion').value='10';
+  _('nv-avail').style.display='none';
+}
 
 // ── COBRANZAS ─────────────────────────────────────────────
 let cobTab='pend';
