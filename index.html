@@ -185,8 +185,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       <div class="field">
         <label>Duración (s)</label>
         <select id="dsp-duracion" onchange="checkDisp()">
+          <option value="15" selected>15 segundos</option>
           <option value="10">10 segundos</option>
-          <option value="15">15 segundos</option>
         </select>
       </div>
       <div class="field"><label>Filtrar</label>
@@ -215,7 +215,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   <div id="ven-loading" class="loading-row" style="display:none"><span class="spin"></span>Cargando...</div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Orden</th><th>Cliente</th><th>Soportes</th><th>Período</th><th>Total</th><th>Factura</th><th>Estado cobro</th><th>Fecha est. pago</th><th>Estado</th></tr></thead>
+      <thead><tr><th>Orden</th><th>Cliente</th><th>Soportes</th><th>Período</th><th>Pases y Dur.</th><th>Total</th><th>Factura</th><th>Estado cobro</th><th>Fecha est. pago</th><th>Estado</th></tr></thead>
       <tbody id="ven-tbody"></tbody>
     </table>
   </div>
@@ -237,8 +237,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
       <div class="field">
         <label>Duración del pase</label>
         <select id="nv-duracion" onchange="checkAvNV()">
+          <option value="15" selected>15 segundos</option>
           <option value="10">10 segundos</option>
-          <option value="15">15 segundos</option>
         </select>
       </div>
       <div class="field"><label>Total facturado ($)</label><input type="number" id="nv-total" placeholder="0"></div>
@@ -715,10 +715,10 @@ async function syncOcupacion(){
 }
 
 // ── OCUPACIÓN EN SEGUNDOS ─────────────────────────────────────────────
-function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0, duracionSolicitada = 10) {
+function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0, duracionSolicitada = 15) {
   const sop = SOPS.find(s => s.id === sopId) || {};
   const capPases = Number(sop.cap) || 2592;
-  const capSegundos = capPases * 10; // Capacidad física a segundos
+  const capSegundos = capPases * 15; // Capacidad física a segundos (Base 15s)
 
   const campsSop = CAMPS.filter(c =>
     (c.soportes || []).includes(sopId) &&
@@ -729,8 +729,8 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0, duracionSol
   if (!desde || !hasta) {
     if (OCUP_HOY[sopId]) {
       const o = OCUP_HOY[sopId];
-      const vendidoSegs = (Number(o.vendido) || 0) * 10; // Asumiendo que OCUP_HOY viene en pases desde Sheets
-      const capRealSegs = (Number(o.cap) || capPases) * 10;
+      const vendidoSegs = (Number(o.vendido) || 0) * 15; 
+      const capRealSegs = (Number(o.cap) || capPases) * 15;
       return {
         pico: vendidoSegs,
         fechaPico: vendidoSegs > 0 ? HOY : '',
@@ -765,9 +765,10 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0, duracionSol
     const diaStr = dia.toISOString().slice(0, 10);
     
     // Acá multiplicamos (pases × duración) para saber los SEGUNDOS consumidos
+    // Si la campaña no tiene duración cargada (viejas), asumimos 15s
     const segsDia = campsSop
       .filter(c => c.ini <= diaStr && c.fin >= diaStr)
-      .reduce((a, c) => a + (Number(c.pases || 0) * Number(c.duracion || 10)), 0);
+      .reduce((a, c) => a + (Number(c.pases || 0) * Number(c.duracion || 15)), 0);
       
     if (segsDia > picoSegundos) {
       picoSegundos = segsDia;
@@ -807,7 +808,7 @@ const lblOcup = p => p >= 90 ? 'Sin disp.' : p >= 25 ? 'Parcial' : 'Libre';
 const bdgOcup = p => p >= 90 ? 'bdg-err' : p >= 25 ? 'bdg-w' : 'bdg-ok';
 
 function sopCardHTML(s, ocpSegs, extra) {
-  const capSegs = (Number(s.cap) || 2592) * 10;
+  const capSegs = (Number(s.cap) || 2592) * 15;
   const p = capSegs > 0 ? Math.min(100, Math.round((ocpSegs / capSegs) * 100)) : 0;
   const disp = Math.max(0, capSegs - ocpSegs);
 
@@ -893,7 +894,7 @@ function checkDisp(){
   const ini = _('dsp-ini').value;
   const fin = _('dsp-fin').value;
   const pases = parseInt(_('dsp-pases').value) || 0;
-  const duracion = parseInt(_('dsp-duracion').value) || 10;
+  const duracion = parseInt(_('dsp-duracion').value) || 15;
   const filtro = _('dsp-filt').value;
 
   let lista = SOPS.map(s => {
@@ -913,7 +914,7 @@ function checkDisp(){
     const oc = x.oc;
     const ok = x.ok;
     const reqSegs = x.reqSegs;
-    const capSegs = (Number(s.cap) || 2592) * 10;
+    const capSegs = (Number(s.cap) || 2592) * 15;
 
     const pAfter = capSegs > 0
       ? Math.min(100, Math.round(((oc.pico + (reqSegs || 0)) / capSegs) * 100))
@@ -971,7 +972,7 @@ async function syncVentas(){
           ini: toISO(row['Fecha Inicio']),
           fin: toISO(row['Fecha Fin']),
           pases: Number(row['Pases']) || 0,
-          duracion: Number(row['Duración (s)']) || 10,
+          duracion: Number(row['Duración (s)']) || 15,
           total: 0,
           factura: row['N° de Factura'],
           cobro: row['Estado Facturación'] || '',
@@ -1004,6 +1005,7 @@ function renderVentas(){
     <td style="font-weight:500">${c.cliente||'—'}</td>
     <td style="font-size:11px;color:var(--text2)">${(c.soportes||[]).join(', ')||'—'}</td>
     <td style="font-size:11px;white-space:nowrap">${fmtD(c.ini)}<br>${fmtD(c.fin)}</td>
+    <td style="font-size:11px;color:var(--text2)">${fmt(c.pases)} pases<br>${c.duracion||15}s</td>
     <td style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${fmt(c.total)}</td>
     <td style="font-size:11px">${c.factura||'—'}</td>
     <td><span class="bdg ${c.cobro==='Cobrado'?'bdg-ok':c.cobro==='Pendiente'?'bdg-w':'bdg-blu'}">${c.cobro||'—'}</span></td>
@@ -1011,7 +1013,7 @@ function renderVentas(){
       ${c.fechaPagoEst ? fmtD(c.fechaPagoEst) : '—'}
     </td>
     <td><span class="bdg ${c.estado==='ACTIVO'?'bdg-ok':c.estado==='INACTIVO'?'bdg-neu':'bdg-w'}">${c.estado||'—'}</span></td>
-  </tr>`).join('')||`<tr><td colspan="9" class="empty">Sin campañas. Hacé clic en ↻ Sincronizar.</td></tr>`;
+  </tr>`).join('')||`<tr><td colspan="10" class="empty">Sin campañas. Hacé clic en ↻ Sincronizar.</td></tr>`;
 }
 
 // ── NUEVA VENTA ───────────────────────────────────────────
@@ -1029,7 +1031,7 @@ function checkAvNV(){
   const ini = _('nv-ini').value;
   const fin = _('nv-fin').value;
   const pases = parseInt(_('nv-pases').value) || 0;
-  const duracion = parseInt(_('nv-duracion').value) || 10;
+  const duracion = parseInt(_('nv-duracion').value) || 15;
   const box = _('nv-avail');
 
   if(!selSops.length || !ini || !fin || !pases){ box.style.display='none'; return; }
@@ -1041,7 +1043,7 @@ function checkAvNV(){
   selSops.forEach(sid => {
     const s = SOPS.find(x => x.id === sid);
     if(!s) return;
-    const capSegs = (Number(s.cap) || 2592) * 10;
+    const capSegs = (Number(s.cap) || 2592) * 15;
     const oc = ocupacionSoporte(sid, ini, fin, pases, duracion);
     const ok = reqSegs <= oc.disponible;
     if(!ok) anyBad = true;
@@ -1076,7 +1078,7 @@ async function guardarVenta(){
   const ini = _('nv-ini').value;
   const fin = _('nv-fin').value;
   const pases = parseInt(_('nv-pases').value) || 0;
-  const duracion = parseInt(_('nv-duracion').value) || 10;
+  const duracion = parseInt(_('nv-duracion').value) || 15;
   if(!cli || !selSops.length || !ini || !fin || !pases){ alert('Completá: cliente, al menos un soporte, fechas y pases.'); return; }
   const totalCampania = parseFloat(_('nv-total').value) || 0;
   const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
@@ -1100,7 +1102,7 @@ function resetNV(){
   selSops=[];
   buildChips();
   ['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs','nv-fechapago'].forEach(id=>_(id).value='');
-  _('nv-duracion').value='10';
+  _('nv-duracion').value='15';
   _('nv-avail').style.display='none';
 }
 
