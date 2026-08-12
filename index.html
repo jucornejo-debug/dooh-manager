@@ -328,23 +328,25 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
     <div class="msg-ok" id="cg-ok">✓ Gasto registrado en Google Sheets.</div>
     <div class="msg-err" id="cg-err"></div>
     <div class="form-box">
-      <div class="form-title">Nuevo gasto</div>
+      <div class="form-title">Nuevo gasto (Todos los campos obligatorios para el registro)</div>
       <div class="fg2">
         <div class="field"><label>Fecha del gasto</label><input type="date" id="cg-fecha"></div>
-        <div class="field"><label>Categoría</label>
+        <div class="field"><label>Fecha Pago Efectivo</label><input type="date" id="cg-fpago"></div>
+        <div class="field"><label>Categoría Costo</label>
           <select id="cg-cat">
             <option>Alquiler Locación</option><option>Luz</option><option>Internet</option>
             <option>Mantenimiento</option><option>RRHH / Sueldos</option>
             <option>Caja chica</option><option>Impuestos</option><option>Otro</option>
           </select>
         </div>
-        <div class="field full"><label>Soportes (si aplica) — seleccioná uno o más</label>
-          <div class="chips" id="cg-chips"></div>
-          <div class="hint">Si dejás esto vacío, el gasto se registra como general (sin soporte). Si elegís varios, el monto total se divide en partes iguales entre los soportes seleccionados y se genera un registro por cada uno.</div>
+        <div class="field"><label>Estado de Pago</label>
+          <select id="cg-est"><option>Pagado</option><option>Pendiente</option></select>
         </div>
-        <div class="field"><label>Descripción</label><input type="text" id="cg-desc" placeholder="Ej: Reparación pantalla LED T3-P2"></div>
-        <div class="field"><label>Monto total ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
-        <div class="field"><label>IVA</label>
+        <div class="field"><label>Forma de Pago</label>
+          <select id="cg-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
+        </div>
+        <div class="field"><label>Monto Neto de IVA ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
+        <div class="field"><label>IVA (Alícuota)</label>
           <select id="cg-iva" onchange="calcIvaGasto()">
             <option value="0">Sin IVA</option>
             <option value="27">27%</option>
@@ -352,7 +354,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
             <option value="10.5">10.5%</option>
           </select>
         </div>
-        <div class="field"><label>IVA crédito fiscal ($)</label><input type="text" id="cg-iva-c" readonly></div>
+        <div class="field"><label>IVA crédito fiscal — calculado ($)</label><input type="text" id="cg-iva-c" readonly></div>
         <div class="field"><label>Percepciones ($)</label><input type="number" id="cg-percep" placeholder="0"></div>
         <div class="field"><label>Facturado</label>
           <select id="cg-facturado" onchange="toggleFacturado()">
@@ -361,17 +363,12 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
           </select>
         </div>
         <div class="field" id="cg-fact-wrap-nro" style="display:none"><label>N° de Factura</label><input type="text" id="cg-nrofactura" placeholder="A-0001-00000123"></div>
-        <div class="field" id="cg-fact-wrap-razon" style="display:none"><label>Razón Social</label><input type="text" id="cg-razonsocial" placeholder="Nombre / Razón social del proveedor"></div>
-        <div class="field"><label>Estado de pago</label>
-          <select id="cg-est"><option>Pagado</option><option>Pendiente</option></select>
+        <div class="field" id="cg-fact-wrap-razon" style="display:none"><label>Razón Social</label><input type="text" id="cg-razonsocial" placeholder="Proveedor / Razón Social"></div>
+        <div class="field full"><label>Ubicación (Soportes) — seleccioná uno o más</label>
+          <div class="chips" id="cg-chips"></div>
+          <div class="hint">Si dejás esto vacío, el gasto se registra como general. Si elegís varios, el monto se divide en partes iguales.</div>
         </div>
-        <div class="field"><label>Fecha de pago / vto.</label>
-          <input type="date" id="cg-fpago">
-          <div class="hint">Podés poner fecha futura para proyecciones.</div>
-        </div>
-        <div class="field"><label>Forma de pago</label>
-          <select id="cg-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
-        </div>
+        <div class="field full"><label>Descripción</label><input type="text" id="cg-desc" placeholder="Detalle del gasto..."></div>
       </div>
       <div class="fa">
         <button class="btn btn-sec" onclick="resetGasto()">Limpiar</button>
@@ -415,10 +412,12 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         <div class="field"><label>Fecha de adquisición</label><input type="date" id="iv-fecha"></div>
         <div class="field"><label>Soporte</label>
           <select id="iv-sop">
-            <option>T1-P1</option><option>T2-P1</option><option>T2-P2</option>
-            <option>T3-P1</option><option>T3-P2</option><option>T4-P1</option><option>T4-P2</option>
-            <option>T5-P1</option><option>T5-P2</option><option>T6-P1</option><option>T6-P2</option>
-            <option>T7-P1</option><option>T7-P2</option><option>T8-P1</option><option>T8-P2</option>
+            <option>Galería Margalef-1</option>
+            <option>La Continental-1</option><option>La Continental-2</option>
+            <option>El Palacio-1</option><option>El Palacio-2</option><option>El Palacio-3</option><option>El Palacio-4</option>
+            <option>El Punto-1</option><option>El Punto-2</option><option>El Punto-3</option><option>El Punto-4</option>
+            <option>Buenos Aires-1</option><option>Buenos Aires-2</option>
+            <option>UCASAL-1</option><option>UCASAL-2</option>
           </select>
         </div>
         <div class="field"><label>Categoría</label><input type="text" id="iv-cat" placeholder="Pantalla LED, Estructura, etc."></div>
@@ -581,14 +580,14 @@ function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
 let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load(LS.inv);
 
 let SOPS=[
-  {id:'T1-P1',loc:'Galería Margalef',cap:2592},
-  {id:'T2-P1',loc:'La Continental',cap:2880},{id:'T2-P2',loc:'La Continental',cap:2880},
-  {id:'T3-P1',loc:'El Palacio',cap:2880},{id:'T3-P2',loc:'El Palacio',cap:2880},
-  {id:'T4-P1',loc:'El Palacio',cap:2880},{id:'T4-P2',loc:'El Palacio',cap:2880},
-  {id:'T5-P1',loc:'El Punto',cap:2880},{id:'T5-P2',loc:'El Punto',cap:2880},
-  {id:'T6-P1',loc:'El Punto',cap:2880},{id:'T6-P2',loc:'El Punto',cap:2880},
-  {id:'T7-P1',loc:'Buenos Aires',cap:2880},{id:'T7-P2',loc:'Buenos Aires',cap:2880},
-  {id:'T8-P1',loc:'UCASAL',cap:2880},{id:'T8-P2',loc:'UCASAL',cap:2880},
+  {id:'Galería Margalef-1',loc:'Galería Margalef',cap:2592},
+  {id:'La Continental-1',loc:'La Continental',cap:2880},{id:'La Continental-2',loc:'La Continental',cap:2880},
+  {id:'El Palacio-1',loc:'El Palacio',cap:2880},{id:'El Palacio-2',loc:'El Palacio',cap:2880},
+  {id:'El Palacio-3',loc:'El Palacio',cap:2880},{id:'El Palacio-4',loc:'El Palacio',cap:2880},
+  {id:'El Punto-1',loc:'El Punto',cap:2880},{id:'El Punto-2',loc:'El Punto',cap:2880},
+  {id:'El Punto-3',loc:'El Punto',cap:2880},{id:'El Punto-4',loc:'El Punto',cap:2880},
+  {id:'Buenos Aires-1',loc:'Buenos Aires',cap:2880},{id:'Buenos Aires-2',loc:'Buenos Aires',cap:2880},
+  {id:'UCASAL-1',loc:'UCASAL',cap:2880},{id:'UCASAL-2',loc:'UCASAL',cap:2880},
 ];
 
 // ── UTILS ─────────────────────────────────────────────────
@@ -767,8 +766,6 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0, duracionSol
     dia.setDate(dia.getDate() + i);
     const diaStr = dia.toISOString().slice(0, 10);
     
-    // Acá multiplicamos (pases × duración) para saber los SEGUNDOS consumidos
-    // Si la campaña no tiene duración cargada (viejas), asumimos 15s
     const segsDia = campsSop
       .filter(c => c.ini <= diaStr && c.fin >= diaStr)
       .reduce((a, c) => a + (Number(c.pases || 0) * Number(c.duracion || 15)), 0);
@@ -780,7 +777,6 @@ function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0, duracionSol
       fechasPico.push(diaStr);
     }
     
-    // Verificamos conflicto comparando los segundos requeridos vs la capacidad total en segundos
     if (pasesSolicitados) {
        if (segsDia + (pasesSolicitados * duracionSolicitada) > capSegundos) {
          fechasSinDisponible.push(diaStr);
@@ -1255,44 +1251,53 @@ function calcIvaGasto(){
 
 async function guardarGasto(){
   const fecha = _('cg-fecha').value;
+  const fechaPago = _('cg-fpago').value;
   const montoIngresado = parseFloat(_('cg-neto').value) || 0;
-  if(!fecha || !montoIngresado){alert('Ingresá fecha y monto.'); return;}
+  if(!fecha || !montoIngresado){alert('Ingresá al menos la fecha y el monto neto.'); return;}
   
   const al = parseFloat(_('cg-iva').value) || 0;
   const ivaTotal = ivaC(montoIngresado, al);
-  const netoTotal = montoIngresado - ivaTotal; // Se extrae el IVA para guardar el neto real
+  const netoTotal = montoIngresado; 
   
   const percepTotal = parseFloat(_('cg-percep').value) || 0;
   const facturado = _('cg-facturado').value;
   const nroFactura = facturado === 'Si' ? _('cg-nrofactura').value.trim() : '';
   const razonSocial = facturado === 'Si' ? _('cg-razonsocial').value.trim() : '';
   
-  if(facturado === 'Si' && (!nroFactura || !razonSocial)){
-    alert('Si el gasto está facturado, completá N° de Factura y Razón Social.'); return;
-  }
-  
   const cat = _('cg-cat').value, desc = _('cg-desc').value, est = _('cg-est').value;
-  const fpago = _('cg-fpago').value || fecha, pago = _('cg-pago').value;
+  const pago = _('cg-pago').value;
 
-  const soportes = selSopsGasto.length ? selSopsGasto.slice() : [''];
+  const soportes = selSopsGasto.length ? selSopsGasto.slice() : ['General'];
   const n = soportes.length;
   const netoPorSoporte = Math.round((netoTotal / n) * 100) / 100;
+  const ivaPorSoporte = Math.round((ivaTotal / n) * 100) / 100;
   const percepPorSoporte = Math.round((percepTotal / n) * 100) / 100;
 
   const nuevosGastos = [];
   try {
     for(const sop of soportes){
       const g = {
-        id: 'G-' + (GASTOS.length + nuevosGastos.length + 1).toString().padStart(3, '0'),
-        fecha, fechaPago: fpago, cat, sop, desc, neto: netoPorSoporte, al, est, pago,
-        percep: percepPorSoporte, facturado, nroFactura, razonSocial
+        fecha,
+        fechaPago: fechaPago || fecha,
+        soporte: sop === 'General' ? '' : sop,
+        categoria: cat,
+        descripcion: desc,
+        monto: netoPorSoporte,
+        iva: ivaPorSoporte,
+        formaPago: pago,
+        estado: est,
+        percepciones: percepPorSoporte,
+        facturado,
+        nroFactura,
+        razonSocial
       };
-      if(URL_GS) await api('saveCosto', {
-        fecha: g.fecha, fechaPago: g.fechaPago, soporte: g.sop, categoria: g.cat, descripcion: g.desc,
-        monto: g.neto, formaPago: g.pago, percepciones: g.percep, facturado: g.facturado,
-        nroFactura: g.nroFactura, razonSocial: g.razonSocial
+      if(URL_GS) await api('saveCosto', g);
+      nuevosGastos.push({
+        id: 'G-' + (GASTOS.length + nuevosGastos.length + 1).toString().padStart(3, '0'),
+        fecha: g.fecha, fechaPago: g.fechaPago, cat: g.categoria, sop: g.soporte, desc: g.descripcion,
+        neto: g.monto, al, est: g.estado, pago: g.formaPago, percep: g.percepciones,
+        facturado: g.facturado, nroFactura: g.nroFactura, razonSocial: g.razonSocial
       });
-      nuevosGastos.push(g);
     }
     GASTOS.push(...nuevosGastos); save(LS.gastos, GASTOS); flash('cg-ok'); resetGasto(); renderIva();
   } catch(e) { flashErr('cg-err', e.message); }
@@ -1739,4 +1744,3 @@ if(URL_GS){
 </script>
 </body>
 </html>
-En este codigo HTML en vez de T1 a T8 necesito que el ID se llame por el nombre de ubicacion y - y el numero de pantalla
