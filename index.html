@@ -346,7 +346,10 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         <div class="field"><label>Monto total ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
         <div class="field"><label>IVA</label>
           <select id="cg-iva" onchange="calcIvaGasto()">
-            <option value="0">Sin IVA</option><option value="21">21%</option><option value="10.5">10.5%</option>
+            <option value="0">Sin IVA</option>
+            <option value="27">27%</option>
+            <option value="21">21%</option>
+            <option value="10.5">10.5%</option>
           </select>
         </div>
         <div class="field"><label>IVA crédito fiscal ($)</label><input type="text" id="cg-iva-c" readonly></div>
@@ -1736,3 +1739,4 @@ if(URL_GS){
 </script>
 </body>
 </html>
+En este codigo HTML en vez de T1 a T8 necesito que el ID se llame por el nombre de ubicacion y - y el numero de pantalla
