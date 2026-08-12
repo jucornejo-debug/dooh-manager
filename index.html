@@ -242,11 +242,10 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         </select>
       </div>
       <div class="field"><label>Total facturado ($)</label><input type="number" id="nv-total" placeholder="0"></div>
-      <div class="field"><label>N° Factura (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
+      <div class="field"><label>N° Factura / Comprobante (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
       <div class="field"><label>Estado cobro</label>
         <select id="nv-cobest"><option>Pendiente</option><option>Parcialmente cobrado</option><option>Cobrado</option></select>
       </div>
-      <!-- NUEVO: Fecha estimativa de pago -->
       <div class="field">
         <label>Fecha estimativa de pago</label>
         <input type="date" id="nv-fechapago">
@@ -303,7 +302,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         </select>
       </div>
       <div class="field"><label>IVA calculado ($)</label><input type="text" id="nc-iva-c" readonly></div>
-      <div class="field"><label>N° Factura</label><input type="text" id="nc-fac" placeholder="A-0001-00000123"></div>
+      <div class="field"><label>N° Factura / Comprobante</label><input type="text" id="nc-fac" placeholder="A-0001-00000123"></div>
       <div class="field"><label>Forma de pago</label>
         <select id="nc-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
       </div>
@@ -345,7 +344,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         <div class="field"><label>Forma de Pago</label>
           <select id="cg-pago"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select>
         </div>
-        <div class="field"><label>Monto Neto de IVA ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
+        <div class="field"><label>Monto Neto ($)</label><input type="number" id="cg-neto" placeholder="0" oninput="calcIvaGasto()"></div>
         <div class="field"><label>IVA (Alícuota)</label>
           <select id="cg-iva" onchange="calcIvaGasto()">
             <option value="0">Sin IVA</option>
@@ -356,14 +355,29 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         </div>
         <div class="field"><label>IVA crédito fiscal — calculado ($)</label><input type="text" id="cg-iva-c" readonly></div>
         <div class="field"><label>Percepciones ($)</label><input type="number" id="cg-percep" placeholder="0"></div>
+        
+        <!-- NUEVO SISTEMA FACTURADO / TIPO -->
         <div class="field"><label>Facturado</label>
           <select id="cg-facturado" onchange="toggleFacturado()">
             <option value="No">No</option>
             <option value="Si">Sí</option>
           </select>
         </div>
-        <div class="field" id="cg-fact-wrap-nro" style="display:none"><label>N° de Factura</label><input type="text" id="cg-nrofactura" placeholder="A-0001-00000123"></div>
-        <div class="field" id="cg-fact-wrap-razon" style="display:none"><label>Razón Social</label><input type="text" id="cg-razonsocial" placeholder="Proveedor / Razón Social"></div>
+        <div class="field" id="cg-fact-wrap-tipo" style="display:none">
+          <label>Tipo de Factura</label>
+          <select id="cg-tipofactura">
+            <option value="A">Factura A</option>
+            <option value="B">Factura B</option>
+            <option value="C">Factura C</option>
+            <option value="M">Factura M</option>
+            <option value="E">Factura E</option>
+          </select>
+        </div>
+        
+        <!-- COMPROBANTE Y PROVEEDOR SIEMPRE VISIBLES -->
+        <div class="field"><label>N° Factura / Comprobante</label><input type="text" id="cg-nrofactura" placeholder="0001-00000123"></div>
+        <div class="field"><label>Proveedor / Razón Social</label><input type="text" id="cg-razonsocial" placeholder="Nombre de quien emite"></div>
+        
         <div class="field full"><label>Ubicación (Soportes) — seleccioná uno o más</label>
           <div class="chips" id="cg-chips"></div>
           <div class="hint">Si dejás esto vacío, el gasto se registra como general. Si elegís varios, el monto se divide en partes iguales.</div>
@@ -582,10 +596,8 @@ let CAMPS=load(LS.camps),COBROS=load(LS.cobros),GASTOS=load(LS.gastos),INVS=load
 let SOPS=[
   {id:'Galería Margalef-1',loc:'Galería Margalef',cap:2592},
   {id:'La Continental-1',loc:'La Continental',cap:2880},{id:'La Continental-2',loc:'La Continental',cap:2880},
-  {id:'El Palacio-1',loc:'El Palacio',cap:2880},{id:'El Palacio-2',loc:'El Palacio',cap:2880},
-  {id:'El Palacio-3',loc:'El Palacio',cap:2880},{id:'El Palacio-4',loc:'El Palacio',cap:2880},
-  {id:'El Punto-1',loc:'El Punto',cap:2880},{id:'El Punto-2',loc:'El Punto',cap:2880},
-  {id:'El Punto-3',loc:'El Punto',cap:2880},{id:'El Punto-4',loc:'El Punto',cap:2880},
+  {id:'El Palacio-1',loc:'El Palacio',cap:2880},{id:'El Palacio-2',loc:'El Palacio',cap:2880},{id:'El Palacio-3',loc:'El Palacio',cap:2880},{id:'El Palacio-4',loc:'El Palacio',cap:2880},
+  {id:'El Punto-1',loc:'El Punto',cap:2880},{id:'El Punto-2',loc:'El Punto',cap:2880},{id:'El Punto-3',loc:'El Punto',cap:2880},{id:'El Punto-4',loc:'El Punto',cap:2880},
   {id:'Buenos Aires-1',loc:'Buenos Aires',cap:2880},{id:'Buenos Aires-2',loc:'Buenos Aires',cap:2880},
   {id:'UCASAL-1',loc:'UCASAL',cap:2880},{id:'UCASAL-2',loc:'UCASAL',cap:2880},
 ];
@@ -1238,9 +1250,7 @@ function toggleChipGasto(id){
 }
 function toggleFacturado(){
   const si=_('cg-facturado').value==='Si';
-  _('cg-fact-wrap-nro').style.display=si?'':'none';
-  _('cg-fact-wrap-razon').style.display=si?'':'none';
-  if(!si){_('cg-nrofactura').value='';_('cg-razonsocial').value='';}
+  _('cg-fact-wrap-tipo').style.display=si?'':'none';
 }
 
 function calcIvaGasto(){
@@ -1261,8 +1271,9 @@ async function guardarGasto(){
   
   const percepTotal = parseFloat(_('cg-percep').value) || 0;
   const facturado = _('cg-facturado').value;
-  const nroFactura = facturado === 'Si' ? _('cg-nrofactura').value.trim() : '';
-  const razonSocial = facturado === 'Si' ? _('cg-razonsocial').value.trim() : '';
+  const tipoFactura = facturado === 'Si' ? _('cg-tipofactura').value : '';
+  const nroFactura = _('cg-nrofactura').value.trim();
+  const razonSocial = _('cg-razonsocial').value.trim();
   
   const cat = _('cg-cat').value, desc = _('cg-desc').value, est = _('cg-est').value;
   const pago = _('cg-pago').value;
@@ -1288,6 +1299,7 @@ async function guardarGasto(){
         estado: est,
         percepciones: percepPorSoporte,
         facturado,
+        tipoFactura,
         nroFactura,
         razonSocial
       };
@@ -1296,7 +1308,7 @@ async function guardarGasto(){
         id: 'G-' + (GASTOS.length + nuevosGastos.length + 1).toString().padStart(3, '0'),
         fecha: g.fecha, fechaPago: g.fechaPago, cat: g.categoria, sop: g.soporte, desc: g.descripcion,
         neto: g.monto, al, est: g.estado, pago: g.formaPago, percep: g.percepciones,
-        facturado: g.facturado, nroFactura: g.nroFactura, razonSocial: g.razonSocial
+        facturado: g.facturado, tipoFactura: g.tipoFactura, nroFactura: g.nroFactura, razonSocial: g.razonSocial
       });
     }
     GASTOS.push(...nuevosGastos); save(LS.gastos, GASTOS); flash('cg-ok'); resetGasto(); renderIva();
@@ -1306,6 +1318,7 @@ async function guardarGasto(){
 function resetGasto(){
   ['cg-fecha','cg-fpago','cg-neto','cg-desc','cg-iva-c','cg-percep','cg-nrofactura','cg-razonsocial'].forEach(id=>_(id).value='');
   _('cg-iva').value='0';_('cg-est').value='Pagado';_('cg-facturado').value='No';
+  _('cg-tipofactura').value='A';
   toggleFacturado();buildChipsGasto();
 }
 function valG(row,keys){
@@ -1322,6 +1335,7 @@ async function syncGastos(){
       neto:numAR(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||'',
       percep:numAR(valG(g,['Percepciones','PERCEPCIONES','Percepción']))||0,
       facturado:valG(g,['Facturado','FACTURADO'])||'No',
+      tipoFactura:valG(g,['Tipo de Factura','Tipo Factura'])||'',
       nroFactura:valG(g,['N° de Factura','N° Factura','Nro Factura','NRO FACTURA']),
       razonSocial:valG(g,['Razón Social','Razon Social','RAZÓN SOCIAL'])
     }));
@@ -1341,9 +1355,12 @@ function renderGastos(){
   _('cos-tbody').innerHTML=lista.map(g=>{
     const iva=g.neto*(g.al/100),venc=g.est==='Pendiente'&&g.fechaPago<HOY,percep=Number(g.percep)||0;
     const total=g.neto+iva+percep;
+    
+    // Mostramos la data del proveedor/nro factura lindo en la tabla
     const factBdg=g.facturado==='Si'
-      ?`<span class="bdg bdg-ok">Sí${g.nroFactura?': '+g.nroFactura:''}</span>${g.razonSocial?`<div style="font-size:9.5px;color:var(--text2);margin-top:2px">${g.razonSocial}</div>`:''}`
-      :`<span class="bdg bdg-neu">No</span>`;
+      ?`<span class="bdg bdg-ok">Sí${g.tipoFactura?' ('+g.tipoFactura+')':''}${g.nroFactura?': '+g.nroFactura:''}</span>${g.razonSocial?`<div style="font-size:9.5px;color:var(--text2);margin-top:2px">${g.razonSocial}</div>`:''}`
+      :`<span class="bdg bdg-neu">No${g.nroFactura?' ('+g.nroFactura+')':''}</span>${g.razonSocial?`<div style="font-size:9.5px;color:var(--text2);margin-top:2px">${g.razonSocial}</div>`:''}`;
+      
     return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3)">${g.id}</td><td>${fmtD(g.fecha)}</td><td>${g.cat||'—'}</td><td style="font-size:11px;color:var(--text2)">${g.sop||'General'}</td><td>${g.desc||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(g.neto)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--green)">$${fmt(iva)}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--orange)">${percep?'$'+fmt(percep):'—'}</td><td style="font-family:'IBM Plex Mono',monospace">$${fmt(total)}</td><td style="font-size:11px">${factBdg}</td><td><span class="bdg ${g.est==='Pagado'?'bdg-ok':venc?'bdg-err':'bdg-w'}">${g.est}</span></td><td style="font-size:11px;color:${venc?'var(--red)':'var(--text3)'}">${fmtD(g.fechaPago)}</td></tr>`;
   }).join('')||`<tr><td colspan="12" class="empty">Sin gastos.</td></tr>`;
 }
