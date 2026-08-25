@@ -994,10 +994,18 @@ async function syncVentas(){
       }
       if(row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
       
-      // CORRECCIÓN AQUÍ: Para evitar duplicar los montos si la planilla devuelve varias filas por soporte
-      byOrden[ord].total = Math.max(byOrden[ord].total, numAR(row['Total Facturado']));
+      // SOLUCIÓN DEFINITIVA: Volvemos a sumar (+=) porque tu Google Sheets 
+      // tiene los montos divididos fila por fila.
+      byOrden[ord].total += numAR(row['Total Facturado']);
     });
-    CAMPS = Object.values(byOrden);
+    
+    // Y ACA ESTÁ LA MAGIA: Al final de la suma, redondeamos el número.
+    // Esto mata el problema original de perder centavos (ej: 99.999 en vez de 100.000)
+    CAMPS = Object.values(byOrden).map(camp => {
+      camp.total = Math.round(camp.total);
+      return camp;
+    });
+
     save(LS.camps, CAMPS);
     renderVentas();
     renderDash();
@@ -1096,8 +1104,9 @@ async function guardarVenta(){
   
   const totalCampania = parseFloat(_('nv-total').value) || 0;
   
-  // CORRECCIÓN AQUÍ: El total no se divide más. Va completo en el payload.
-  const totalPorSoporte = totalCampania; 
+  // RESTAURADO: Dividimos el total por la cantidad de pantallas antes de guardarlo en Sheets, 
+  // para mantener la compatibilidad con el formato exacto que tiene tu base de datos hoy.
+  const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
   
   const fechaPagoEst = _('nv-fechapago').value || '';
   const payload = {
