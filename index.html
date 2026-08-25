@@ -1098,7 +1098,7 @@ async function guardarVenta(){
     orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
     cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases, duracion,
     totalFacturado: totalPorSoporte, nroFactura: _('nv-fac').value.trim(),
-    fechaEstimativaPago: fechaPagoEst
+    fechaEstimativaPago: fechaPagoEst, estadoInicial: _('nv-cobest').value
   };
   _('nv-load').style.display='block';
   try{
@@ -1254,9 +1254,13 @@ function toggleFacturado(){
 }
 
 function calcIvaGasto(){
+  // OJO: acá el monto ingresado es el MONTO NETO (sin IVA) — a diferencia de
+  // Cobros/Inversiones donde se ingresa el total con IVA incluido. Por eso el
+  // IVA de Costos se calcula sumando un % sobre el neto (add-on), no
+  // extrayéndolo con ivaC() como si ya viniera incluido en el monto.
   const m = parseFloat(_('cg-neto').value) || 0;
   const a = parseFloat(_('cg-iva').value) || 0;
-  _('cg-iva-c').value = a ? '$' + fmt(ivaC(m, a)) : '$0';
+  _('cg-iva-c').value = a ? '$' + fmt(Math.round(m * (a / 100))) : '$0';
 }
 
 async function guardarGasto(){
@@ -1266,7 +1270,8 @@ async function guardarGasto(){
   if(!fecha || !montoIngresado){alert('Ingresá al menos la fecha y el monto neto.'); return;}
   
   const al = parseFloat(_('cg-iva').value) || 0;
-  const ivaTotal = ivaC(montoIngresado, al);
+  // Monto Neto ingresado + IVA calculado como % adicional (ver calcIvaGasto)
+  const ivaTotal = Math.round(montoIngresado * (al / 100));
   const netoTotal = montoIngresado; 
   
   const percepTotal = parseFloat(_('cg-percep').value) || 0;
@@ -1329,16 +1334,32 @@ async function syncGastos(){
   if(!URL_GS) return;
   try{
     const r=await api('getCostos');
-    GASTOS=r.data.map(g=>({
-      id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],
-      cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',
-      neto:numAR(g['Monto Neto de IVA'])||0,al:0,est:g['Estado de Pago']||'',pago:g['Forma de Pago']||'',
-      percep:numAR(valG(g,['Percepciones','PERCEPCIONES','Percepción']))||0,
-      facturado:valG(g,['Facturado','FACTURADO'])||'No',
-      tipoFactura:valG(g,['Tipo de Factura','Tipo Factura'])||'',
-      nroFactura:valG(g,['N° de Factura','N° Factura','Nro Factura','NRO FACTURA']),
-      razonSocial:valG(g,['Razón Social','Razon Social','RAZÓN SOCIAL'])
-    }));
+    GASTOS=r.data.map(g=>{
+      const neto = numAR(g['Monto Neto de IVA'])||0;
+      const ivaGuardado = numAR(g['IVA'])||0;
+      // Reconstruimos la alícuota (%) a partir de lo que ya está guardado en la
+      // planilla (neto e IVA), igual que se hace en syncCobros. Antes esto
+      // quedaba fijo en 0, así que después de cada sincronización el IVA de
+      // TODOS los gastos ya cargados se mostraba (y sumaba) como $0.
+      let al = 0;
+      if(neto > 0 && ivaGuardado > 0){
+        const pct = (ivaGuardado / neto) * 100;
+        if(Math.abs(pct - 27) < 2) al = 27;
+        else if(Math.abs(pct - 21) < 2) al = 21;
+        else if(Math.abs(pct - 10.5) < 2) al = 10.5;
+        else al = Math.round(pct * 10) / 10;
+      }
+      return {
+        id:g['ID Gasto'],fecha:g['Fecha'],fechaPago:g['Fecha Pago Efectivo']||g['Fecha'],
+        cat:g['Categoría Costo']||'',sop:g['Ubicación']||'',desc:g['Descripción']||'',
+        neto, al, est:g['Estado de Pago']||'',pago:g['Forma de Pago']||'',
+        percep:numAR(valG(g,['Percepciones','PERCEPCIONES','Percepción']))||0,
+        facturado:valG(g,['Facturado','FACTURADO'])||'No',
+        tipoFactura:valG(g,['Tipo de Factura','Tipo Factura'])||'',
+        nroFactura:valG(g,['N° de Factura','N° Factura','Nro Factura','NRO FACTURA']),
+        razonSocial:valG(g,['Razón Social','Razon Social','RAZÓN SOCIAL'])
+      };
+    });
     save(LS.gastos,GASTOS);renderGastos();renderIva();
   }catch(e){alert('Error gastos: '+e.message);}
 }
