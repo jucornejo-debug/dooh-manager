@@ -993,7 +993,9 @@ async function syncVentas(){
         };
       }
       if(row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
-      byOrden[ord].total += numAR(row['Total Facturado']);
+      
+      // CORRECCIÓN AQUÍ: Para evitar duplicar los montos si la planilla devuelve varias filas por soporte
+      byOrden[ord].total = Math.max(byOrden[ord].total, numAR(row['Total Facturado']));
     });
     CAMPS = Object.values(byOrden);
     save(LS.camps, CAMPS);
@@ -1091,8 +1093,12 @@ async function guardarVenta(){
   const pases = parseInt(_('nv-pases').value) || 0;
   const duracion = parseInt(_('nv-duracion').value) || 15;
   if(!cli || !selSops.length || !ini || !fin || !pases){ alert('Completá: cliente, al menos un soporte, fechas y pases.'); return; }
+  
   const totalCampania = parseFloat(_('nv-total').value) || 0;
-  const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
+  
+  // CORRECCIÓN AQUÍ: El total no se divide más. Va completo en el payload.
+  const totalPorSoporte = totalCampania; 
+  
   const fechaPagoEst = _('nv-fechapago').value || '';
   const payload = {
     orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
