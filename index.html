@@ -356,7 +356,6 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         <div class="field"><label>IVA crédito fiscal — calculado ($)</label><input type="text" id="cg-iva-c" readonly></div>
         <div class="field"><label>Percepciones ($)</label><input type="number" id="cg-percep" placeholder="0"></div>
         
-        <!-- NUEVO SISTEMA FACTURADO / TIPO -->
         <div class="field"><label>Facturado</label>
           <select id="cg-facturado" onchange="toggleFacturado()">
             <option value="No">No</option>
@@ -374,7 +373,6 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
           </select>
         </div>
         
-        <!-- COMPROBANTE Y PROVEEDOR SIEMPRE VISIBLES -->
         <div class="field"><label>N° Factura / Comprobante</label><input type="text" id="cg-nrofactura" placeholder="0001-00000123"></div>
         <div class="field"><label>Proveedor / Razón Social</label><input type="text" id="cg-razonsocial" placeholder="Nombre de quien emite"></div>
         
@@ -508,7 +506,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 </div>
 
-<!-- P&L — rediseñado como estado de resultados contable -->
+<!-- P&L -->
 <div class="page" id="page-pyl">
   <div class="fbar">
     <div class="fg"><label>Período 1 — Desde</label><input type="date" id="pyl-desde" oninput="renderPYL()"></div>
@@ -732,7 +730,7 @@ async function syncOcupacion(){
 function ocupacionSoporte(sopId, desde, hasta, pasesSolicitados = 0, duracionSolicitada = 15) {
   const sop = SOPS.find(s => s.id === sopId) || {};
   const capPases = Number(sop.cap) || 2592;
-  const capSegundos = capPases * 15; // Capacidad física a segundos (Base 15s)
+  const capSegundos = capPases * 15; 
 
   const campsSop = CAMPS.filter(c =>
     (c.soportes || []).includes(sopId) &&
@@ -904,8 +902,8 @@ function renderDispGrid(){
 function checkDisp(){
   const ini = _('dsp-ini').value;
   const fin = _('dsp-fin').value;
-  const pases = parseInt(_('dsp-pases').value) || 0;
-  const duracion = parseInt(_('dsp-duracion').value) || 15;
+  const pases = parseInt(_('dsp-pases').value, 10) || 0;
+  const duracion = parseInt(_('dsp-duracion').value, 10) || 15;
   const filtro = _('dsp-filt').value;
 
   let lista = SOPS.map(s => {
@@ -982,8 +980,8 @@ async function syncVentas(){
           cliente: row['Cliente'],
           ini: toISO(row['Fecha Inicio']),
           fin: toISO(row['Fecha Fin']),
-          pases: Number(row['Pases']) || 0,
-          duracion: Number(row['Duración (s)']) || 15,
+          pases: parseInt(row['Pases'], 10) || 0,
+          duracion: parseInt(row['Duración (s)'], 10) || 15,
           total: 0,
           factura: row['N° de Factura'],
           cobro: row['Estado Facturación'] || '',
@@ -994,13 +992,9 @@ async function syncVentas(){
       }
       if(row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
       
-      // SOLUCIÓN DEFINITIVA: Volvemos a sumar (+=) porque tu Google Sheets 
-      // tiene los montos divididos fila por fila.
       byOrden[ord].total += numAR(row['Total Facturado']);
     });
     
-    // Y ACA ESTÁ LA MAGIA: Al final de la suma, redondeamos el número.
-    // Esto mata el problema original de perder centavos (ej: 99.999 en vez de 100.000)
     CAMPS = Object.values(byOrden).map(camp => {
       camp.total = Math.round(camp.total);
       return camp;
@@ -1051,8 +1045,8 @@ function toggleChip(id){
 function checkAvNV(){
   const ini = _('nv-ini').value;
   const fin = _('nv-fin').value;
-  const pases = parseInt(_('nv-pases').value) || 0;
-  const duracion = parseInt(_('nv-duracion').value) || 15;
+  const pases = parseInt(_('nv-pases').value, 10) || 0;
+  const duracion = parseInt(_('nv-duracion').value, 10) || 15;
   const box = _('nv-avail');
 
   if(!selSops.length || !ini || !fin || !pases){ box.style.display='none'; return; }
@@ -1098,20 +1092,18 @@ async function guardarVenta(){
   const cli = _('nv-cli').value.trim();
   const ini = _('nv-ini').value;
   const fin = _('nv-fin').value;
-  const pases = parseInt(_('nv-pases').value) || 0;
-  const duracion = parseInt(_('nv-duracion').value) || 15;
+  const pases = parseInt(_('nv-pases').value, 10) || 0;
+  const duracion = parseInt(_('nv-duracion').value, 10) || 15;
   if(!cli || !selSops.length || !ini || !fin || !pases){ alert('Completá: cliente, al menos un soporte, fechas y pases.'); return; }
   
   const totalCampania = parseFloat(_('nv-total').value) || 0;
   
-  // RESTAURADO: Dividimos el total por la cantidad de pantallas antes de guardarlo en Sheets, 
-  // para mantener la compatibilidad con el formato exacto que tiene tu base de datos hoy.
   const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
   
   const fechaPagoEst = _('nv-fechapago').value || '';
   const payload = {
     orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
-    cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases, duracion,
+    cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases: pases, duracion: duracion,
     totalFacturado: totalPorSoporte, nroFactura: _('nv-fac').value.trim(),
     fechaEstimativaPago: fechaPagoEst, estadoInicial: _('nv-cobest').value
   };
@@ -1269,10 +1261,6 @@ function toggleFacturado(){
 }
 
 function calcIvaGasto(){
-  // OJO: acá el monto ingresado es el MONTO NETO (sin IVA) — a diferencia de
-  // Cobros/Inversiones donde se ingresa el total con IVA incluido. Por eso el
-  // IVA de Costos se calcula sumando un % sobre el neto (add-on), no
-  // extrayéndolo con ivaC() como si ya viniera incluido en el monto.
   const m = parseFloat(_('cg-neto').value) || 0;
   const a = parseFloat(_('cg-iva').value) || 0;
   _('cg-iva-c').value = a ? '$' + fmt(Math.round(m * (a / 100))) : '$0';
@@ -1285,7 +1273,6 @@ async function guardarGasto(){
   if(!fecha || !montoIngresado){alert('Ingresá al menos la fecha y el monto neto.'); return;}
   
   const al = parseFloat(_('cg-iva').value) || 0;
-  // Monto Neto ingresado + IVA calculado como % adicional (ver calcIvaGasto)
   const ivaTotal = Math.round(montoIngresado * (al / 100));
   const netoTotal = montoIngresado; 
   
@@ -1352,10 +1339,6 @@ async function syncGastos(){
     GASTOS=r.data.map(g=>{
       const neto = numAR(g['Monto Neto de IVA'])||0;
       const ivaGuardado = numAR(g['IVA'])||0;
-      // Reconstruimos la alícuota (%) a partir de lo que ya está guardado en la
-      // planilla (neto e IVA), igual que se hace en syncCobros. Antes esto
-      // quedaba fijo en 0, así que después de cada sincronización el IVA de
-      // TODOS los gastos ya cargados se mostraba (y sumaba) como $0.
       let al = 0;
       if(neto > 0 && ivaGuardado > 0){
         const pct = (ivaGuardado / neto) * 100;
@@ -1392,7 +1375,6 @@ function renderGastos(){
     const iva=g.neto*(g.al/100),venc=g.est==='Pendiente'&&g.fechaPago<HOY,percep=Number(g.percep)||0;
     const total=g.neto+iva+percep;
     
-    // Mostramos la data del proveedor/nro factura lindo en la tabla
     const factBdg=g.facturado==='Si'
       ?`<span class="bdg bdg-ok">Sí${g.tipoFactura?' ('+g.tipoFactura+')':''}${g.nroFactura?': '+g.nroFactura:''}</span>${g.razonSocial?`<div style="font-size:9.5px;color:var(--text2);margin-top:2px">${g.razonSocial}</div>`:''}`
       :`<span class="bdg bdg-neu">No${g.nroFactura?' ('+g.nroFactura+')':''}</span>${g.razonSocial?`<div style="font-size:9.5px;color:var(--text2);margin-top:2px">${g.razonSocial}</div>`:''}`;
@@ -1414,7 +1396,7 @@ function calcIvaInv(){
 function calcDeprec(){
   const mIngresado = parseFloat(_('iv-monto').value) || 0;
   const al = parseFloat(_('iv-iva-al').value) || 0;
-  const mNeto = mIngresado - ivaC(mIngresado, al); // La depreciación es sobre el neto
+  const mNeto = mIngresado - ivaC(mIngresado, al); 
   const v = parseInt(_('iv-vida').value) || 60;
   const r = parseFloat(_('iv-resid').value) || 0;
   _('iv-dep').value = v > 0 ? '$' + fmt(Math.round((mNeto - r) / v)) + '/mes' : '—';
@@ -1427,7 +1409,7 @@ async function guardarInv(){
   
   const ivaAl = parseFloat(_('iv-iva-al').value) || 0;
   const ivaInv = ivaC(montoIngresado, ivaAl);
-  const montoNeto = montoIngresado - ivaInv; // Se extrae el IVA
+  const montoNeto = montoIngresado - ivaInv; 
   
   const vida = parseInt(_('iv-vida').value) || 60;
   const resid = parseFloat(_('iv-resid').value) || 0;
