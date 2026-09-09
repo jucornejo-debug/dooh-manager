@@ -241,11 +241,49 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
           <option value="10">10 segundos</option>
         </select>
       </div>
-      <div class="field"><label>Total facturado ($)</label><input type="number" id="nv-total" placeholder="0"></div>
-      <div class="field"><label>N° Factura / Comprobante (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
-      <div class="field"><label>Estado cobro</label>
-        <select id="nv-cobest"><option>Pendiente</option><option>Parcialmente cobrado</option><option>Cobrado</option></select>
+      
+      <!-- NUEVA CONFIGURACIÓN FACTURA E IVA -->
+      <div class="field"><label>Facturado</label>
+        <select id="nv-facturado" onchange="toggleFacturadoNV()">
+          <option value="No">No</option>
+          <option value="Si">Sí</option>
+        </select>
       </div>
+      <div class="field" id="nv-wrap-tipo" style="display:none">
+        <label>Tipo de Factura</label>
+        <select id="nv-tipofactura">
+          <option value="A">Factura A</option>
+          <option value="B">Factura B</option>
+          <option value="C">Factura C</option>
+          <option value="M">Factura M</option>
+          <option value="E">Factura E</option>
+        </select>
+      </div>
+      <div class="field"><label>Alícuota IVA</label>
+        <select id="nv-alicuota">
+          <option value="0">Sin IVA / Exento</option>
+          <option value="10.5">10.5%</option>
+          <option value="21" selected>21%</option>
+          <option value="27">27%</option>
+        </select>
+      </div>
+      <div class="field"><label>N° Factura / Comprobante (opcional)</label><input type="text" id="nv-fac" placeholder="A-0001-00000123"></div>
+
+      <div class="field"><label>Total facturado ($)</label><input type="number" id="nv-total" placeholder="0" oninput="onTotalChange()"></div>
+      
+      <div class="field"><label>Estado cobro</label>
+        <select id="nv-cobest" onchange="toggleCobroInicial()">
+          <option value="Pendiente">Pendiente</option>
+          <option value="Parcialmente cobrado">Parcialmente cobrado</option>
+          <option value="Cobrado">Cobrado</option>
+        </select>
+      </div>
+      <div class="field" id="nv-wrap-cobro" style="display:none">
+        <label>Monto ingresado ahora ($) (Bruto con IVA)</label>
+        <input type="number" id="nv-monto-cobro" placeholder="Ej: 50000">
+        <div class="hint">Este monto se registrará automáticamente en Cobranzas.</div>
+      </div>
+      
       <div class="field">
         <label>Fecha estimativa de pago</label>
         <input type="date" id="nv-fechapago">
@@ -356,7 +394,6 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
         <div class="field"><label>IVA crédito fiscal — calculado ($)</label><input type="text" id="cg-iva-c" readonly></div>
         <div class="field"><label>Percepciones ($)</label><input type="number" id="cg-percep" placeholder="0"></div>
         
-        <!-- NUEVO SISTEMA FACTURADO / TIPO -->
         <div class="field"><label>Facturado</label>
           <select id="cg-facturado" onchange="toggleFacturado()">
             <option value="No">No</option>
@@ -374,7 +411,6 @@ tbody tr:hover td{background:rgba(255,255,255,.015)}
           </select>
         </div>
         
-        <!-- COMPROBANTE Y PROVEEDOR SIEMPRE VISIBLES -->
         <div class="field"><label>N° Factura / Comprobante</label><input type="text" id="cg-nrofactura" placeholder="0001-00000123"></div>
         <div class="field"><label>Proveedor / Razón Social</label><input type="text" id="cg-razonsocial" placeholder="Nombre de quien emite"></div>
         
@@ -993,9 +1029,15 @@ async function syncVentas(){
         };
       }
       if(row['ID Soporte']) byOrden[ord].soportes.push(row['ID Soporte']);
+      
       byOrden[ord].total += numAR(row['Total Facturado']);
     });
-    CAMPS = Object.values(byOrden);
+    
+    CAMPS = Object.values(byOrden).map(camp => {
+      camp.total = Math.round(camp.total);
+      return camp;
+    });
+
     save(LS.camps, CAMPS);
     renderVentas();
     renderDash();
@@ -1084,6 +1126,35 @@ function checkAvNV(){
   box.style.display = 'block';
 }
 
+function onTotalChange() {
+  if (_('nv-cobest').value === 'Cobrado') {
+    _('nv-monto-cobro').value = _('nv-total').value;
+  }
+}
+
+function toggleCobroInicial() {
+  const est = _('nv-cobest').value;
+  const wrap = _('nv-wrap-cobro');
+  const total = parseFloat(_('nv-total').value) || 0;
+  
+  if (est === 'Parcialmente cobrado') {
+    wrap.style.display = 'flex';
+    _('nv-monto-cobro').value = '';
+  } else if (est === 'Cobrado') {
+    wrap.style.display = 'flex';
+    _('nv-monto-cobro').value = total || '';
+  } else {
+    wrap.style.display = 'none';
+    _('nv-monto-cobro').value = '';
+  }
+}
+
+// LOGICA NUEVA DE FACTURA EN NUEVA VENTA
+function toggleFacturadoNV(){
+  const si = _('nv-facturado').value === 'Si';
+  _('nv-wrap-tipo').style.display = si ? 'flex' : 'none';
+}
+
 async function guardarVenta(){
   const cli = _('nv-cli').value.trim();
   const ini = _('nv-ini').value;
@@ -1091,29 +1162,97 @@ async function guardarVenta(){
   const pases = parseInt(_('nv-pases').value) || 0;
   const duracion = parseInt(_('nv-duracion').value) || 15;
   if(!cli || !selSops.length || !ini || !fin || !pases){ alert('Completá: cliente, al menos un soporte, fechas y pases.'); return; }
+  
+  const estadoCobro = _('nv-cobest').value;
+  const montoCobro = parseFloat(_('nv-monto-cobro').value) || 0;
+  if (estadoCobro !== 'Pendiente' && !montoCobro) {
+    alert('Ingresá el monto que se cobró inicialmente o cambiá el estado a Pendiente.');
+    return;
+  }
+  
   const totalCampania = parseFloat(_('nv-total').value) || 0;
   const totalPorSoporte = selSops.length ? totalCampania / selSops.length : totalCampania;
+  
+  const facturado = _('nv-facturado').value;
+  const tipoFactura = facturado === 'Si' ? _('nv-tipofactura').value : '';
+  const alicuotaIva = parseFloat(_('nv-alicuota').value) || 0;
   const fechaPagoEst = _('nv-fechapago').value || '';
+  
   const payload = {
     orden: _('nv-orden').value.trim() || ('OP-' + Date.now().toString().slice(-5)),
     cliente: cli, soportes: selSops, fechaInicio: ini, fechaFin: fin, pases, duracion,
     totalFacturado: totalPorSoporte, nroFactura: _('nv-fac').value.trim(),
-    fechaEstimativaPago: fechaPagoEst, estadoInicial: _('nv-cobest').value
+    fechaEstimativaPago: fechaPagoEst, estadoInicial: estadoCobro,
+    facturado: facturado, tipoFactura: tipoFactura, alicuotaIva: alicuotaIva
   };
+  
   _('nv-load').style.display='block';
   try{
     if(URL_GS) await api('saveVenta', payload);
-    CAMPS.push({...payload, ini:toISO(ini), fin:toISO(fin), total:totalCampania, factura:payload.nroFactura, cobro:_('nv-cobest').value, estado:'ACTIVO', fechaPagoEst});
+    CAMPS.push({...payload, ini:toISO(ini), fin:toISO(fin), total:totalCampania, factura:payload.nroFactura, cobro:estadoCobro, estado:'ACTIVO', fechaPagoEst});
     save(LS.camps, CAMPS);
-    flash('nv-ok');resetNV();renderDash();buildCliSelect();
-  }catch(e){flashErr('nv-err', e.message);}
-  finally{_('nv-load').style.display='none';}
+    
+    // GENERACIÓN AUTOMÁTICA DEL COBRO (AHORA SEPARA EL IVA MATEMÁTICAMENTE SI TIENE)
+    if (estadoCobro !== 'Pendiente' && montoCobro > 0) {
+      const cobroId = 'C-' + (COBROS.length + 1).toString().padStart(3, '0');
+      
+      let ivaCobro = 0;
+      let netoCobro = montoCobro;
+      if (alicuotaIva > 0) {
+        ivaCobro = Math.round((montoCobro / (1 + alicuotaIva / 100)) * (alicuotaIva / 100));
+        netoCobro = montoCobro - ivaCobro;
+      }
+      
+      const cobroData = {
+        id: cobroId,
+        cliente: cli,
+        orden: payload.orden,
+        fecha: HOY, 
+        monto: montoCobro,
+        ivaAl: alicuotaIva,
+        factura: payload.nroFactura,
+        pago: 'Transferencia',
+        obs: 'Cobro inicial al cargar venta'
+      };
+      
+      if (URL_GS) {
+        await api('saveCobro', {
+          orden: cobroData.orden, 
+          cliente: cobroData.cliente, 
+          fechaCobroProyectada: cobroData.fecha,
+          montoNeto: netoCobro,
+          iva: ivaCobro, 
+          metodoPago: cobroData.pago, 
+          fechaPagoReal: cobroData.fecha
+        });
+      }
+      COBROS.push(cobroData);
+      save(LS.cobros, COBROS);
+    }
+    
+    flash('nv-ok');
+    resetNV();
+    renderDash();
+    buildCliSelect();
+    renderCob(); 
+    renderIva(); 
+  }catch(e){
+    flashErr('nv-err', e.message);
+  } finally{
+    _('nv-load').style.display='none';
+  }
 }
 function resetNV(){
   selSops=[];
   buildChips();
-  ['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs','nv-fechapago'].forEach(id=>_(id).value='');
+  ['nv-orden','nv-cli','nv-ini','nv-fin','nv-pases','nv-total','nv-fac','nv-obs','nv-fechapago','nv-monto-cobro'].forEach(id=>_(id).value='');
   _('nv-duracion').value='15';
+  _('nv-cobest').value='Pendiente';
+  _('nv-facturado').value='No';
+  _('nv-alicuota').value='21';
+  toggleFacturadoNV();
+  toggleCobroInicial();
+  _('nv-wrap-cobro').style.display='none';
   _('nv-avail').style.display='none';
 }
 
@@ -1254,10 +1393,6 @@ function toggleFacturado(){
 }
 
 function calcIvaGasto(){
-  // OJO: acá el monto ingresado es el MONTO NETO (sin IVA) — a diferencia de
-  // Cobros/Inversiones donde se ingresa el total con IVA incluido. Por eso el
-  // IVA de Costos se calcula sumando un % sobre el neto (add-on), no
-  // extrayéndolo con ivaC() como si ya viniera incluido en el monto.
   const m = parseFloat(_('cg-neto').value) || 0;
   const a = parseFloat(_('cg-iva').value) || 0;
   _('cg-iva-c').value = a ? '$' + fmt(Math.round(m * (a / 100))) : '$0';
@@ -1270,7 +1405,6 @@ async function guardarGasto(){
   if(!fecha || !montoIngresado){alert('Ingresá al menos la fecha y el monto neto.'); return;}
   
   const al = parseFloat(_('cg-iva').value) || 0;
-  // Monto Neto ingresado + IVA calculado como % adicional (ver calcIvaGasto)
   const ivaTotal = Math.round(montoIngresado * (al / 100));
   const netoTotal = montoIngresado; 
   
@@ -1289,34 +1423,44 @@ async function guardarGasto(){
   const ivaPorSoporte = Math.round((ivaTotal / n) * 100) / 100;
   const percepPorSoporte = Math.round((percepTotal / n) * 100) / 100;
 
-  const nuevosGastos = [];
+  // AHORA MANDAMOS UN ARRAY (BULK INSERT) PARA EVITAR QUE GOOGLE BLOQUEE PETICIONES MÚLTIPLES
+  const payloadBulk = [];
+
+  for(const sop of soportes){
+    payloadBulk.push({
+      fecha,
+      fechaPago: fechaPago || fecha,
+      soporte: sop === 'General' ? '' : sop,
+      categoria: cat,
+      descripcion: desc,
+      monto: netoPorSoporte,
+      iva: ivaPorSoporte,
+      formaPago: pago,
+      estado: est,
+      percepciones: percepPorSoporte,
+      facturado,
+      tipoFactura,
+      nroFactura,
+      razonSocial
+    });
+  }
+
   try {
-    for(const sop of soportes){
-      const g = {
-        fecha,
-        fechaPago: fechaPago || fecha,
-        soporte: sop === 'General' ? '' : sop,
-        categoria: cat,
-        descripcion: desc,
-        monto: netoPorSoporte,
-        iva: ivaPorSoporte,
-        formaPago: pago,
-        estado: est,
-        percepciones: percepPorSoporte,
-        facturado,
-        tipoFactura,
-        nroFactura,
-        razonSocial
-      };
-      if(URL_GS) await api('saveCosto', g);
-      nuevosGastos.push({
-        id: 'G-' + (GASTOS.length + nuevosGastos.length + 1).toString().padStart(3, '0'),
+    if(URL_GS) await api('saveCosto', payloadBulk);
+    
+    payloadBulk.forEach((g, idx) => {
+      GASTOS.push({
+        id: 'G-' + (GASTOS.length + 1).toString().padStart(3, '0'),
         fecha: g.fecha, fechaPago: g.fechaPago, cat: g.categoria, sop: g.soporte, desc: g.descripcion,
         neto: g.monto, al, est: g.estado, pago: g.formaPago, percep: g.percepciones,
         facturado: g.facturado, tipoFactura: g.tipoFactura, nroFactura: g.nroFactura, razonSocial: g.razonSocial
       });
-    }
-    GASTOS.push(...nuevosGastos); save(LS.gastos, GASTOS); flash('cg-ok'); resetGasto(); renderIva();
+    });
+    
+    save(LS.gastos, GASTOS); 
+    flash('cg-ok'); 
+    resetGasto(); 
+    renderIva();
   } catch(e) { flashErr('cg-err', e.message); }
 }
 
@@ -1337,10 +1481,6 @@ async function syncGastos(){
     GASTOS=r.data.map(g=>{
       const neto = numAR(g['Monto Neto de IVA'])||0;
       const ivaGuardado = numAR(g['IVA'])||0;
-      // Reconstruimos la alícuota (%) a partir de lo que ya está guardado en la
-      // planilla (neto e IVA), igual que se hace en syncCobros. Antes esto
-      // quedaba fijo en 0, así que después de cada sincronización el IVA de
-      // TODOS los gastos ya cargados se mostraba (y sumaba) como $0.
       let al = 0;
       if(neto > 0 && ivaGuardado > 0){
         const pct = (ivaGuardado / neto) * 100;
@@ -1376,8 +1516,6 @@ function renderGastos(){
   _('cos-tbody').innerHTML=lista.map(g=>{
     const iva=g.neto*(g.al/100),venc=g.est==='Pendiente'&&g.fechaPago<HOY,percep=Number(g.percep)||0;
     const total=g.neto+iva+percep;
-    
-    // Mostramos la data del proveedor/nro factura lindo en la tabla
     const factBdg=g.facturado==='Si'
       ?`<span class="bdg bdg-ok">Sí${g.tipoFactura?' ('+g.tipoFactura+')':''}${g.nroFactura?': '+g.nroFactura:''}</span>${g.razonSocial?`<div style="font-size:9.5px;color:var(--text2);margin-top:2px">${g.razonSocial}</div>`:''}`
       :`<span class="bdg bdg-neu">No${g.nroFactura?' ('+g.nroFactura+')':''}</span>${g.razonSocial?`<div style="font-size:9.5px;color:var(--text2);margin-top:2px">${g.razonSocial}</div>`:''}`;
@@ -1399,7 +1537,7 @@ function calcIvaInv(){
 function calcDeprec(){
   const mIngresado = parseFloat(_('iv-monto').value) || 0;
   const al = parseFloat(_('iv-iva-al').value) || 0;
-  const mNeto = mIngresado - ivaC(mIngresado, al); // La depreciación es sobre el neto
+  const mNeto = mIngresado - ivaC(mIngresado, al); 
   const v = parseInt(_('iv-vida').value) || 60;
   const r = parseFloat(_('iv-resid').value) || 0;
   _('iv-dep').value = v > 0 ? '$' + fmt(Math.round((mNeto - r) / v)) + '/mes' : '—';
@@ -1412,7 +1550,7 @@ async function guardarInv(){
   
   const ivaAl = parseFloat(_('iv-iva-al').value) || 0;
   const ivaInv = ivaC(montoIngresado, ivaAl);
-  const montoNeto = montoIngresado - ivaInv; // Se extrae el IVA
+  const montoNeto = montoIngresado - ivaInv;
   
   const vida = parseInt(_('iv-vida').value) || 60;
   const resid = parseFloat(_('iv-resid').value) || 0;
@@ -1764,7 +1902,6 @@ if(URL_GS){
       syncGastos().then(()=>{renderIva();});
       syncInversiones().then(()=>{renderIva();});
       
-      // NUEVO: Disparamos la sincronización de cobros al iniciar
       syncCobros().then(() => {
         renderCob();
         renderDash();
