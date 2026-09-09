@@ -1153,6 +1153,8 @@ function toggleCobroInicial() {
 function toggleFacturadoNV(){
   const si = _('nv-facturado').value === 'Si';
   _('nv-wrap-tipo').style.display = si ? 'flex' : 'none';
+  // Ocultamos también el campo de Alícuota de IVA si no hay factura
+  _('nv-alicuota').parentElement.style.display = si ? 'flex' : 'none';
 }
 
 async function guardarVenta(){
@@ -1175,7 +1177,9 @@ async function guardarVenta(){
   
   const facturado = _('nv-facturado').value;
   const tipoFactura = facturado === 'Si' ? _('nv-tipofactura').value : '';
-  const alicuotaIva = parseFloat(_('nv-alicuota').value) || 0;
+  
+  // ACA ESTA LA CLAVE: Si no está facturado, forzamos la alícuota a 0.
+  const alicuotaIva = facturado === 'Si' ? (parseFloat(_('nv-alicuota').value) || 0) : 0;
   const fechaPagoEst = _('nv-fechapago').value || '';
   
   const payload = {
